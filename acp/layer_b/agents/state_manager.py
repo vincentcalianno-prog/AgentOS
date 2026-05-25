@@ -14,6 +14,7 @@ Deterministic — no LLM.
 
 from __future__ import annotations
 
+import re
 import threading
 import uuid
 from dataclasses import replace
@@ -24,6 +25,7 @@ from acp.layer_b.core.adapters.audit_adapter import AuditEvent, AuditLogAdapter
 from acp.layer_b.core.adapters.ledger_adapter import LedgerAdapter
 from acp.layer_b.core.tenancy import TenancyEnforcer
 from acp.layer_b.core.types import (
+    EVENT_DOCUMENT_EXTRACTED,
     EVENT_DOCUMENT_EXTRACTION_REQUIRED,
     EVENT_INBOUND_REDLINE_RECEIVED,
     EVENT_LRS_APPROVED,
@@ -45,6 +47,15 @@ from acp.layer_b.core.types import (
 
 # Type alias for event subscribers
 EventHandler = Callable[[StateEvent], None]
+
+
+def _slugify(text: str) -> str:
+    """Convert text to a path-safe lowercase slug. Generic — no deployment-specific logic."""
+    text = text.lower().strip()
+    text = re.sub(r"[^\w\s-]", "", text)
+    text = re.sub(r"[\s_]+", "-", text)
+    text = re.sub(r"-+", "-", text).strip("-")
+    return text[:64] or "unknown"
 
 
 class StateManager:
@@ -335,6 +346,7 @@ class StateManager:
         return {
             EVENT_OUTBOUND_CONTRACT_SENT: self._handle_outbound_contract_sent,
             EVENT_INBOUND_REDLINE_RECEIVED: self._handle_inbound_redline,
+            EVENT_DOCUMENT_EXTRACTED: self._handle_document_extracted,
             EVENT_LRS_DELIVERED: self._handle_lrs_delivered,
             EVENT_LRS_APPROVED: self._handle_lrs_approved,
             EVENT_LRS_RETURNED: self._handle_lrs_returned,
@@ -380,7 +392,13 @@ class StateManager:
             payload={
                 "inbox_message_id": event.payload.get("inbox_message_id"),
                 "inbox_thread_id": event.payload.get("inbox_thread_id"),
-                "round_number": row.round_number + 1,
+                "attachment_ids": event.payload.get("attachment_ids", []),
+                "round_number": row.round_number,  # row already reflects the incremented value
+                "contract_type": row.contract_type,
+                "counterparty_ref": (
+                    row.counterparty_profile_ref
+                    or _slugify(row.counterparty_description or "unknown")
+                ),
             },
             emitted_at=datetime.now(timezone.utc),
             emitted_by="state_manager",
@@ -410,6 +428,30 @@ class StateManager:
             context, event.negotiation_id,
             {"review_package_status": "Returned for Revision", "whos_court": self.get_negotiation(context, event.negotiation_id).owner},
         )
+
+    def _handle_document_extracted(self, context: TenantContext, event: StateEvent) -> None:
+        """A counterparty document was persisted to storage. Update tracker and trigger analysis."""
+        updates = {}
+        if "storage_path" in event.payload:
+            updates["last_counterparty_version"] = event.payload["storage_path"]
+        if "storage_folder_path" in event.payload:
+            updates["storage_folder_path"] = event.payload["storage_folder_path"]
+        if updates:
+            self.update_fields(context, event.negotiation_id, updates)
+
+        # Emit: round is ready for structural diff (Agent 4 subscribes to this)
+        self._emit(StateEvent(
+            event_type=EVENT_ROUND_READY_FOR_ANALYSIS,
+            tenant_id=event.tenant_id,
+            negotiation_id=event.negotiation_id,
+            payload={
+                "storage_path": event.payload.get("storage_path"),
+                "round_number": event.payload.get("round_number"),
+                "fingerprint": event.payload.get("fingerprint"),
+            },
+            emitted_at=datetime.now(timezone.utc),
+            emitted_by="state_manager",
+        ))
 
     def _handle_negotiation_paused(self, context: TenantContext, event: StateEvent) -> None:
         """The row owner has paused automation on this negotiation. Principle 2.9 (Opt-Out)."""
