@@ -190,6 +190,7 @@ class StructuralDiff:
                 event_type=EVENT_DIFF_COMPLETE,
                 tenant_id=event.tenant_id,
                 negotiation_id=event.negotiation_id,
+                workflow_id="contract_redline",
                 payload={
                     "diff_path": diff_path,
                     "round_number": round_number,
@@ -255,6 +256,7 @@ class StructuralDiff:
             event_id=str(uuid.uuid4()),
             tenant_id=context.tenant_id,
             negotiation_id=negotiation_id,
+            workflow_id="contract_redline",
             agent_name=self.AGENT_NAME,
             event_type=event_type,
             timestamp=datetime.now(timezone.utc),

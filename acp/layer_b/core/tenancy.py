@@ -69,6 +69,7 @@ class TenancyEnforcer:
             event_id=str(uuid.uuid4()),
             tenant_id=context.tenant_id,
             negotiation_id=None,
+            workflow_id="contract_redline",
             agent_name="tenancy_enforcer",
             event_type=f"tenancy_violation_{op}",
             timestamp=datetime.now(timezone.utc),

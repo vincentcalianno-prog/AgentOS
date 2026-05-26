@@ -28,6 +28,7 @@ CREATE TABLE IF NOT EXISTS negotiations (
     negotiation_id TEXT NOT NULL,
     row_number INTEGER NOT NULL,
     owner TEXT NOT NULL,
+    workflow_id TEXT NOT NULL,
     category TEXT,
     priority TEXT,
     counterparty_description TEXT,
@@ -62,6 +63,7 @@ def _row_to_db_tuple(row: NegotiationRow, tenant_id: str) -> tuple:
         row.negotiation_id,
         row.row_number,
         row.owner,
+        row.workflow_id,
         row.category,
         row.priority,
         row.counterparty_description,
@@ -87,7 +89,7 @@ def _row_to_db_tuple(row: NegotiationRow, tenant_id: str) -> tuple:
 def _db_tuple_to_row(t: tuple) -> NegotiationRow:
     """Convert a database tuple to a NegotiationRow."""
     (
-        _tenant_id, negotiation_id, row_number, owner,
+        _tenant_id, negotiation_id, row_number, owner, workflow_id,
         category, priority, counterparty_description, whos_court, status_str,
         comments, action_next_steps, contract_type, round_number,
         last_outbound_version_sent, last_counterparty_version,
@@ -100,6 +102,7 @@ def _db_tuple_to_row(t: tuple) -> NegotiationRow:
         negotiation_id=negotiation_id,
         row_number=row_number,
         owner=owner,
+        workflow_id=workflow_id,
         category=category,
         priority=priority,
         counterparty_description=counterparty_description,
@@ -123,7 +126,7 @@ def _db_tuple_to_row(t: tuple) -> NegotiationRow:
 
 
 _FIELD_ORDER = (
-    "tenant_id, negotiation_id, row_number, owner, category, priority, "
+    "tenant_id, negotiation_id, row_number, owner, workflow_id, category, priority, "
     "counterparty_description, whos_court, status, comments, action_next_steps, "
     "contract_type, round_number, last_outbound_version_sent, last_counterparty_version, "
     "last_activity_date, inbox_thread_id, storage_folder_path, review_package_status, "

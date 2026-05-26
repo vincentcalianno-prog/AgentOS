@@ -135,6 +135,7 @@ class NegotiationRow:
     negotiation_id: str  # internal stable ID; not the # column (that's display-only)
     row_number: int  # the # column (display-only)
     owner: str  # the tenant who owns this row (e.g., a Contract Manager identifier)
+    workflow_id: str  # which workflow this negotiation belongs to (e.g., "contract_redline")
 
     # Human-writable narrative fields
     category: Optional[str] = None
@@ -173,6 +174,7 @@ class StateEvent:
     event_type: str
     tenant_id: str  # the tenant scope this event belongs to
     negotiation_id: str
+    workflow_id: str  # which workflow this event belongs to (e.g., "contract_redline")
     payload: dict
     emitted_at: datetime
     emitted_by: str  # agent identifier

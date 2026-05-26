@@ -60,6 +60,7 @@ def _make_extraction_event(
         event_type=EVENT_DOCUMENT_EXTRACTION_REQUIRED,
         tenant_id=tenant_id,
         negotiation_id=negotiation_id,
+        workflow_id="contract_redline",
         payload={
             "inbox_message_id": message_id,
             "inbox_thread_id": negotiation_id,
@@ -357,6 +358,7 @@ class WrongEventTypeTests(unittest.TestCase):
             event_type="some_other_event",
             tenant_id="alice",
             negotiation_id="neg-001",
+            workflow_id="contract_redline",
             payload={},
             emitted_at=_EPOCH,
             emitted_by="state_manager",

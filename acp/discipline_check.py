@@ -124,6 +124,55 @@ def check_no_antora_strings_in_layer_b():
     return violations
 
 
+def check_workflow_id_at_emit_sites():
+    """Verify StateEvent( and NegotiationRow( constructors always include workflow_id.
+
+    Uses parenthesis-depth tracking to extract each full constructor call, then
+    checks that 'workflow_id' appears within it. Comment lines are skipped.
+    Note: string literals containing unbalanced parentheses could cause false
+    results — avoid those in constructor arguments.
+    """
+    CONSTRUCTORS = ("StateEvent(", "NegotiationRow(")
+    violations = []
+    for py_file in LAYER_B.rglob("*.py"):
+        text = py_file.read_text()
+        for constructor in CONSTRUCTORS:
+            search_start = 0
+            while True:
+                pos = text.find(constructor, search_start)
+                if pos == -1:
+                    break
+                # Skip occurrences that appear in comment lines
+                line_start = text.rfind('\n', 0, pos) + 1
+                if text[line_start:pos].lstrip().startswith('#'):
+                    search_start = pos + len(constructor)
+                    continue
+                # Extract the full constructor call via paren-depth tracking
+                depth = 1
+                i = pos + len(constructor)
+                while i < len(text) and depth > 0:
+                    if text[i] == '(':
+                        depth += 1
+                    elif text[i] == ')':
+                        depth -= 1
+                    i += 1
+                call_text = text[pos:i]
+                # If the call uses **-spreading (e.g. NegotiationRow(**defaults)),
+                # trust that workflow_id is in the spread dict — dict contents
+                # cannot be traced statically.
+                if re.search(r'\*\*[a-zA-Z_]', call_text):
+                    search_start = i
+                    continue
+                if 'workflow_id' not in call_text:
+                    line_no = text[:pos].count('\n') + 1
+                    violations.append(
+                        f"  {py_file.relative_to(ROOT)}:{line_no}"
+                        f"  {constructor[:-1]}(...) missing workflow_id"
+                    )
+                search_start = i
+    return violations
+
+
 def check_adapter_directory_structure():
     """Verify adapter abstract interfaces exist for external integrations."""
     required = [
@@ -142,7 +191,7 @@ def main():
 
     all_violations = []
 
-    print("\n[1/3] Checking layer_b imports for layer_c references...")
+    print("\n[1/4] Checking layer_b imports for layer_c references...")
     v = check_no_layer_c_imports()
     if v:
         print(f"  FAIL: {len(v)} import boundary violation(s):")
@@ -152,7 +201,7 @@ def main():
     else:
         print("  PASS: layer_b has no imports from layer_c_antora")
 
-    print("\n[2/3] Checking for Antora-specific strings in layer_b...")
+    print("\n[2/4] Checking for Antora-specific strings in layer_b...")
     v = check_no_antora_strings_in_layer_b()
     if v:
         print(f"  FAIL: {len(v)} Antora-specific string violation(s):")
@@ -162,7 +211,7 @@ def main():
     else:
         print("  PASS: layer_b contains no Antora-specific strings")
 
-    print("\n[3/3] Checking required adapter interfaces exist...")
+    print("\n[3/4] Checking required adapter interfaces exist...")
     v = check_adapter_directory_structure()
     if v:
         print(f"  FAIL: missing required adapter file(s):")
@@ -171,6 +220,16 @@ def main():
         all_violations.extend(v)
     else:
         print("  PASS: required adapter interfaces present")
+
+    print("\n[4/4] Checking workflow_id at StateEvent and NegotiationRow emit sites...")
+    v = check_workflow_id_at_emit_sites()
+    if v:
+        print(f"  FAIL: {len(v)} constructor(s) missing workflow_id:")
+        for line in v:
+            print(line)
+        all_violations.extend(v)
+    else:
+        print("  PASS: all StateEvent and NegotiationRow constructors include workflow_id")
 
     print("\n" + "=" * 70)
     if all_violations:

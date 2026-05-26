@@ -26,6 +26,7 @@ from acp.layer_b.core.adapters.ledger_adapter import LedgerAdapter
 from acp.layer_b.core.tenancy import TenancyEnforcer
 from acp.layer_b.core.types import (
     EVENT_ANALYSIS_COMPLETE,
+    EVENT_COUNTER_PROPOSALS_READY,
     EVENT_DIFF_COMPLETE,
     EVENT_DOCUMENT_EXTRACTED,
     EVENT_DOCUMENT_EXTRACTION_REQUIRED,
@@ -351,6 +352,7 @@ class StateManager:
             EVENT_DOCUMENT_EXTRACTED: self._handle_document_extracted,
             EVENT_DIFF_COMPLETE: self._handle_diff_complete,
             EVENT_ANALYSIS_COMPLETE: self._handle_analysis_complete,
+            EVENT_COUNTER_PROPOSALS_READY: self._handle_counter_proposals_ready,
             EVENT_LRS_DELIVERED: self._handle_lrs_delivered,
             EVENT_LRS_APPROVED: self._handle_lrs_approved,
             EVENT_LRS_RETURNED: self._handle_lrs_returned,
@@ -393,6 +395,7 @@ class StateManager:
             event_type=EVENT_DOCUMENT_EXTRACTION_REQUIRED,
             tenant_id=event.tenant_id,
             negotiation_id=event.negotiation_id,
+            workflow_id=event.workflow_id,
             payload={
                 "inbox_message_id": event.payload.get("inbox_message_id"),
                 "inbox_thread_id": event.payload.get("inbox_thread_id"),
@@ -451,6 +454,7 @@ class StateManager:
             event_type=EVENT_ROUND_READY_FOR_ANALYSIS,
             tenant_id=event.tenant_id,
             negotiation_id=event.negotiation_id,
+            workflow_id=event.workflow_id,
             payload={
                 "counterparty_document_path": event.payload.get("storage_path"),
                 "outbound_document_path": row.last_outbound_version_sent,
@@ -476,6 +480,11 @@ class StateManager:
     def _handle_analysis_complete(self, context: TenantContext, event: StateEvent) -> None:
         """Redline analysis is complete. Audit and re-emit for Agent 6."""
         self._audit_write(context, event.negotiation_id, "analysis_complete_received", event.payload)
+        self._emit(event)
+
+    def _handle_counter_proposals_ready(self, context: TenantContext, event: StateEvent) -> None:
+        """Counter-proposals have been drafted. Audit and re-emit for Agent 7."""
+        self._audit_write(context, event.negotiation_id, "counter_proposals_ready_received", event.payload)
         self._emit(event)
 
     def _handle_negotiation_paused(self, context: TenantContext, event: StateEvent) -> None:
@@ -508,6 +517,7 @@ class StateManager:
                     event_id=str(uuid.uuid4()),
                     tenant_id=event.tenant_id,
                     negotiation_id=event.negotiation_id,
+                    workflow_id=event.workflow_id,
                     agent_name="state_manager",
                     event_type="subscriber_error",
                     timestamp=datetime.now(timezone.utc),
@@ -539,6 +549,7 @@ class StateManager:
             event_id=str(uuid.uuid4()),
             tenant_id=context.tenant_id,
             negotiation_id=negotiation_id,
+            workflow_id="contract_redline",
             agent_name="state_manager",
             event_type=event_type,
             timestamp=datetime.now(timezone.utc),

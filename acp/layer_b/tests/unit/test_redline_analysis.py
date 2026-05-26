@@ -70,6 +70,7 @@ def _make_event(
         event_type=EVENT_DIFF_COMPLETE,
         tenant_id=tenant_id,
         negotiation_id=negotiation_id,
+        workflow_id="contract_redline",
         payload={"diff_path": diff_path, "round_number": round_number},
         emitted_at=_EPOCH,
         emitted_by="structural_diff",
@@ -417,6 +418,7 @@ class WrongEventTypeTests(unittest.TestCase):
             event_type="some_other_event",
             tenant_id="alice",
             negotiation_id="neg-001",
+            workflow_id="contract_redline",
             payload={},
             emitted_at=_EPOCH,
             emitted_by="state_manager",
@@ -457,6 +459,7 @@ class AuditTrailTests(unittest.TestCase):
             event_type=EVENT_DIFF_COMPLETE,
             tenant_id="alice",
             negotiation_id="neg-acme-001",
+            workflow_id="contract_redline",
             payload={"round_number": 1},  # no diff_path
             emitted_at=_EPOCH,
             emitted_by="structural_diff",

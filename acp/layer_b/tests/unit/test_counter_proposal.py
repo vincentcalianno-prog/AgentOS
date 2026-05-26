@@ -78,6 +78,7 @@ def _make_event(
         event_type=EVENT_ANALYSIS_COMPLETE,
         tenant_id=tenant_id,
         negotiation_id=negotiation_id,
+        workflow_id="contract_redline",
         payload={"analysis_path": analysis_path, "round_number": round_number},
         emitted_at=_EPOCH,
         emitted_by="redline_analyzer",
@@ -358,6 +359,7 @@ class WrongEventTypeTests(unittest.TestCase):
             event_type="some_other_event",
             tenant_id="alice",
             negotiation_id="neg-001",
+            workflow_id="contract_redline",
             payload={},
             emitted_at=_EPOCH,
             emitted_by="other_agent",
@@ -397,6 +399,7 @@ class AuditTrailTests(unittest.TestCase):
             event_type=EVENT_ANALYSIS_COMPLETE,
             tenant_id="alice",
             negotiation_id="neg-001",
+            workflow_id="contract_redline",
             payload={"round_number": 1},  # no analysis_path
             emitted_at=_EPOCH,
             emitted_by="redline_analyzer",

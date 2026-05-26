@@ -21,6 +21,7 @@ class AuditEvent:
     event_id: str  # unique per event
     tenant_id: str
     negotiation_id: Optional[str]  # may be None for cross-cutting events
+    workflow_id: str  # which workflow this event belongs to (e.g., "contract_redline")
     agent_name: str
     event_type: str
     timestamp: datetime

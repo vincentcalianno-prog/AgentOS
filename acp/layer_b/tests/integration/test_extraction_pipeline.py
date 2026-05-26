@@ -56,6 +56,7 @@ def _seed_negotiation(
         negotiation_id=negotiation_id,
         row_number=1,
         owner=tenant_id,
+        workflow_id="contract_redline",
         counterparty_description="Acme Industrial - synthetic widget assembly",
         contract_type=contract_type,
         counterparty_profile_ref=counterparty_ref,
@@ -114,6 +115,7 @@ class ExtractionEventToStateManagerTests(unittest.TestCase):
             event_type=EVENT_DOCUMENT_EXTRACTION_REQUIRED,
             tenant_id=self.tenant_id,
             negotiation_id=self.negotiation_id,
+            workflow_id="contract_redline",
             payload={
                 "inbox_message_id": "msg-001",
                 "inbox_thread_id": self.thread_id,

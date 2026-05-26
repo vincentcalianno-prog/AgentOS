@@ -224,6 +224,7 @@ class DocumentExtractor:
                 event_type=EVENT_DOCUMENT_EXTRACTED,
                 tenant_id=tenant_id,
                 negotiation_id=negotiation_id,
+                workflow_id="contract_redline",
                 payload={
                     "storage_path": stored.path,
                     "storage_folder_path": storage_folder,
@@ -326,6 +327,7 @@ class DocumentExtractor:
             event_id=str(uuid.uuid4()),
             tenant_id=context.tenant_id,
             negotiation_id=negotiation_id,
+            workflow_id="contract_redline",
             agent_name=self.AGENT_NAME,
             event_type=event_type,
             timestamp=datetime.now(timezone.utc),

@@ -82,6 +82,7 @@ def _make_event(
         event_type=EVENT_ROUND_READY_FOR_ANALYSIS,
         tenant_id=tenant_id,
         negotiation_id=negotiation_id,
+        workflow_id="contract_redline",
         payload={
             "counterparty_document_path": counterparty_path,
             "outbound_document_path": outbound_path,
@@ -383,6 +384,7 @@ class AuditTrailTests(unittest.TestCase):
             event_type=EVENT_ROUND_READY_FOR_ANALYSIS,
             tenant_id="alice",
             negotiation_id="neg-acme-001",
+            workflow_id="contract_redline",
             payload={"storage_folder_path": _STORAGE_FOLDER, "round_number": 1},
             emitted_at=_EPOCH,
             emitted_by="state_manager",
@@ -418,6 +420,7 @@ class WrongEventTypeTests(unittest.TestCase):
             event_type="some_other_event",
             tenant_id="alice",
             negotiation_id="neg-001",
+            workflow_id="contract_redline",
             payload={},
             emitted_at=_EPOCH,
             emitted_by="state_manager",

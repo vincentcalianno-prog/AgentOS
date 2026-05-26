@@ -224,6 +224,7 @@ class EmailWatcher:
             event_type=EVENT_INBOUND_REDLINE_RECEIVED,
             tenant_id=context.tenant_id,
             negotiation_id=msg.thread_id,  # State Manager resolves thread → negotiation
+            workflow_id="contract_redline",
             payload={
                 "inbox_message_id": msg.message_id,
                 "inbox_thread_id": msg.thread_id,
@@ -246,6 +247,7 @@ class EmailWatcher:
             event_type=EVENT_INBOUND_NON_REDLINE,
             tenant_id=context.tenant_id,
             negotiation_id=msg.thread_id,
+            workflow_id="contract_redline",
             payload={
                 "inbox_message_id": msg.message_id,
                 "inbox_thread_id": msg.thread_id,
@@ -287,6 +289,7 @@ class EmailWatcher:
             event_id=str(uuid.uuid4()),
             tenant_id=context.tenant_id,
             negotiation_id=negotiation_id,
+            workflow_id="contract_redline",
             agent_name=self.AGENT_NAME,
             event_type=event_type,
             timestamp=datetime.now(timezone.utc),

@@ -92,6 +92,7 @@ def _seed_negotiation(
         negotiation_id=negotiation_id,
         row_number=1,
         owner=tenant_id,
+        workflow_id="contract_redline",
         counterparty_description="Acme Industrial - synthetic widget assembly",
         contract_type="generic-agreement",
         status=initial_state,
