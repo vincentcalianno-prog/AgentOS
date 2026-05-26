@@ -43,8 +43,8 @@ _ALLOWED_TRANSITIONS: dict[NegotiationState, set[NegotiationState]] = {
     },
     NegotiationState.CONTRACT_SENT: {
         NegotiationState.REDLINES_RECEIVED,
-        NegotiationState.NEGOTIATING,  # supplier may accept and counter-sign with minor changes
-        NegotiationState.PENDING_SIGNATURE,  # supplier accepts as-is
+        NegotiationState.NEGOTIATING,  # counterparty may accept and counter-sign with minor changes
+        NegotiationState.PENDING_SIGNATURE,  # counterparty accepts as-is
         NegotiationState.ON_HOLD,
         NegotiationState.WILL_NOT_EXECUTE,
     },

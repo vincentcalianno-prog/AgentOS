@@ -8,7 +8,7 @@ Two pipeline scopes tested:
 
 Per Implementation Guide Section 7.1: synthetic fixtures only.
     Counterparty: Acme Industrial
-    SCMs: alice, bob, carol
+    Tenant owners: alice, bob, carol
 """
 
 from __future__ import annotations

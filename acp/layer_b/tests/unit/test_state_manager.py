@@ -4,8 +4,8 @@ Per Implementation Guide Section 7.1: synthetic fixtures only. No deployment-spe
 counterparty names, no real clause text, no real email content.
 
 Fixtures use made-up names:
-    Suppliers: "Acme Industrial", "Beta Manufacturing", "Gamma Components", "Delta Systems"
-    SCMs: "alice", "bob", "carol"
+    Counterparties: "Acme Industrial", "Beta Manufacturing", "Gamma Components", "Delta Systems"
+    Tenant owners: "alice", "bob", "carol"
 """
 
 from __future__ import annotations
@@ -43,7 +43,7 @@ def _make_row(negotiation_id: str, owner: str, **kwargs) -> NegotiationRow:
         counterparty_description="Acme Industrial - synthetic widget assembly",
         whos_court=owner,
         status=NegotiationState.NOT_STARTED,
-        contract_type="MEPA",
+        contract_type="generic-agreement",
         round_number=0,
     )
     defaults.update(kwargs)
@@ -310,7 +310,7 @@ class EventProcessingTests(unittest.TestCase):
             event_type=EVENT_OUTBOUND_CONTRACT_SENT,
             tenant_id="alice",
             negotiation_id="neg-001",
-            payload={"storage_path": "ACP_Negotiations_alice/MEPA/Acme/round_0/antora_v1.docx"},
+            payload={"storage_path": "tenant-root/generic-agreement/acme/round_0/outbound_v1.docx"},
             emitted_at=datetime.now(timezone.utc),
             emitted_by="email_watcher",
         )
@@ -320,7 +320,7 @@ class EventProcessingTests(unittest.TestCase):
         self.assertEqual(row.status, NegotiationState.CONTRACT_SENT)
         self.assertEqual(
             row.last_outbound_version_sent,
-            "ACP_Negotiations_alice/MEPA/Acme/round_0/antora_v1.docx",
+            "tenant-root/generic-agreement/acme/round_0/outbound_v1.docx",
         )
 
     def test_inbound_redline_increments_round_and_emits_extraction_event(self):
@@ -345,7 +345,7 @@ class EventProcessingTests(unittest.TestCase):
         row = self.sm.get_negotiation(self.alice, "neg-001")
         self.assertEqual(row.status, NegotiationState.REDLINES_RECEIVED)
         self.assertEqual(row.round_number, 1)
-        self.assertEqual(row.whos_court, "alice")  # back to SCM
+        self.assertEqual(row.whos_court, "alice")  # back to owner
 
         # Check that document_extraction_required was emitted to subscribers
         extraction_events = [

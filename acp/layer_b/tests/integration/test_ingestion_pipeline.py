@@ -6,8 +6,8 @@ Verifies the end-to-end ingestion pipeline using:
     - Real StateManager with SQLiteLedger + InMemoryAuditLog
 
 Per Implementation Guide Section 7.1: synthetic fixtures only.
-    Suppliers: Acme Industrial, Beta Manufacturing, Gamma Components
-    SCMs: alice, bob, carol
+    Counterparties: Acme Industrial, Beta Manufacturing, Gamma Components
+    Tenant owners: alice, bob, carol
 """
 
 from __future__ import annotations
@@ -93,7 +93,7 @@ def _seed_negotiation(
         row_number=1,
         owner=tenant_id,
         counterparty_description="Acme Industrial - synthetic widget assembly",
-        contract_type="MEPA",
+        contract_type="generic-agreement",
         status=initial_state,
         inbox_thread_id=thread_id,
         automation_status="Active",

@@ -2,7 +2,7 @@
 
 Per Implementation Guide Section 7.1: synthetic fixtures only.
     Counterparty: Acme Industrial
-    SCMs: alice, bob, carol
+    Tenant owners: alice, bob, carol
 
 Provides pre-built clause sets representing:
   - An outbound version (round 1) of a generic agreement

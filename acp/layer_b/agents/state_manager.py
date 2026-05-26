@@ -25,6 +25,7 @@ from acp.layer_b.core.adapters.audit_adapter import AuditEvent, AuditLogAdapter
 from acp.layer_b.core.adapters.ledger_adapter import LedgerAdapter
 from acp.layer_b.core.tenancy import TenancyEnforcer
 from acp.layer_b.core.types import (
+    EVENT_ANALYSIS_COMPLETE,
     EVENT_DIFF_COMPLETE,
     EVENT_DOCUMENT_EXTRACTED,
     EVENT_DOCUMENT_EXTRACTION_REQUIRED,
@@ -349,6 +350,7 @@ class StateManager:
             EVENT_INBOUND_REDLINE_RECEIVED: self._handle_inbound_redline,
             EVENT_DOCUMENT_EXTRACTED: self._handle_document_extracted,
             EVENT_DIFF_COMPLETE: self._handle_diff_complete,
+            EVENT_ANALYSIS_COMPLETE: self._handle_analysis_complete,
             EVENT_LRS_DELIVERED: self._handle_lrs_delivered,
             EVENT_LRS_APPROVED: self._handle_lrs_approved,
             EVENT_LRS_RETURNED: self._handle_lrs_returned,
@@ -469,6 +471,11 @@ class StateManager:
         )
         self._audit_write(context, event.negotiation_id, "diff_complete_received", event.payload)
         # Re-emit so Agent 5 can subscribe to State Manager like all other downstream agents
+        self._emit(event)
+
+    def _handle_analysis_complete(self, context: TenantContext, event: StateEvent) -> None:
+        """Redline analysis is complete. Audit and re-emit for Agent 6."""
+        self._audit_write(context, event.negotiation_id, "analysis_complete_received", event.payload)
         self._emit(event)
 
     def _handle_negotiation_paused(self, context: TenantContext, event: StateEvent) -> None:

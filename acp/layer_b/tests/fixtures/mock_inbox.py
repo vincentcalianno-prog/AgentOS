@@ -1,9 +1,9 @@
 """MockInboxAdapter — synthetic inbox fixture for layer_b tests.
 
 Per Implementation Guide Section 7.1: fixtures use only made-up data.
-    Synthetic supplier names: Acme Industrial, Beta Manufacturing,
-                              Gamma Components, Delta Systems, Epsilon Labs
-    Synthetic SCMs: alice, bob, carol
+    Synthetic counterparty names: Acme Industrial, Beta Manufacturing,
+                                  Gamma Components, Delta Systems, Epsilon Labs
+    Tenant owners: alice, bob, carol
 
 This module provides:
     MockInboxAdapter  — configurable InboxAdapter for unit and integration tests

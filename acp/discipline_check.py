@@ -60,6 +60,12 @@ ANTORA_FORBIDDEN = [
     "last_antora_version_sent",
     "lrs_status",
     "last_lrs_sent_date",
+    # Antora-specific role and contract terminology
+    "SCM",        # Antora role name; use "owner" or "tenant owner" in layer_b
+    "supplier",   # Antora domain term; use "counterparty" in layer_b
+    "vendor",     # synonym for supplier; use "counterparty" in layer_b
+    "MEPA",       # Antora contract type; use "generic-agreement" in layer_b tests
+    "MPA",        # Antora contract type; use "generic-agreement" in layer_b tests
 ]
 
 # Patterns that should not appear in layer_b
