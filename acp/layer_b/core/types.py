@@ -115,6 +115,48 @@ ROLE_PORTFOLIO_AGGREGATOR = "portfolio_aggregator"
 ROLE_AUDIT_READER = "audit_reader"
 
 
+@dataclass(frozen=True)
+class PortfolioReadContext:
+    """Cross-tenant read context for Agent 9 (Portfolio Aggregator).
+
+    Deliberately not a TenantContext subclass — it cannot be passed to per-tenant
+    write paths. Carries ROLE_PORTFOLIO_AGGREGATOR by default, granting auditable
+    cross-tenant read access across all registered WorkItemSources.
+
+    Architecture Spec Section 4.3: all cross-tenant reads go through Agent 9.
+    """
+    reader_id: str
+    roles: frozenset[str] = field(default_factory=lambda: frozenset({ROLE_PORTFOLIO_AGGREGATOR}))
+
+    def has_role(self, role: str) -> bool:
+        return role in self.roles
+
+
+# ============================================================
+# Portfolio Aggregation Types
+# ============================================================
+
+@dataclass(frozen=True)
+class WorkItem:
+    """Workflow-agnostic view of a single work item for portfolio aggregation.
+
+    Agent 9 (Portfolio Aggregator) operates exclusively on WorkItems.
+    WorkItemSource implementations map their domain objects to this schema.
+    No workflow-specific logic lives here — status is a raw string, terminal
+    states are undefined at this layer.
+    """
+    work_item_id: str
+    tenant_id: str
+    workflow_id: str
+    owner: str
+    status: str                          # workflow-defined status string (e.g. NegotiationState.value)
+    created_at: Optional[datetime]       # None if the source has no creation timestamp
+    last_activity_at: Optional[datetime] # None = maximally stalled; no activity recorded
+    counterparty_name: Optional[str] = None
+    contract_type: Optional[str] = None
+    payload_summary: dict = field(default_factory=dict)  # source-defined metadata
+
+
 # ============================================================
 # Negotiation Row
 # ============================================================
