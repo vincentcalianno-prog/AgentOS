@@ -28,6 +28,7 @@ from acp.layer_b.core.types import (
     EVENT_ANALYSIS_COMPLETE,
     EVENT_COUNTER_PROPOSALS_READY,
     EVENT_DIFF_COMPLETE,
+    EVENT_LRS_READY,
     EVENT_DOCUMENT_EXTRACTED,
     EVENT_DOCUMENT_EXTRACTION_REQUIRED,
     EVENT_INBOUND_REDLINE_RECEIVED,
@@ -353,6 +354,7 @@ class StateManager:
             EVENT_DIFF_COMPLETE: self._handle_diff_complete,
             EVENT_ANALYSIS_COMPLETE: self._handle_analysis_complete,
             EVENT_COUNTER_PROPOSALS_READY: self._handle_counter_proposals_ready,
+            EVENT_LRS_READY: self._handle_lrs_ready,
             EVENT_LRS_DELIVERED: self._handle_lrs_delivered,
             EVENT_LRS_APPROVED: self._handle_lrs_approved,
             EVENT_LRS_RETURNED: self._handle_lrs_returned,
@@ -483,8 +485,30 @@ class StateManager:
         self._emit(event)
 
     def _handle_counter_proposals_ready(self, context: TenantContext, event: StateEvent) -> None:
-        """Counter-proposals have been drafted. Audit and re-emit for Agent 7."""
+        """Counter-proposals have been drafted. Enrich payload from ledger and re-emit for Agent 7.
+
+        Enriches with contract_type and counterparty_description from the NegotiationRow so
+        Agent 7 does not need to derive these from the storage path convention.
+        """
+        row = self.get_negotiation(context, event.negotiation_id)
         self._audit_write(context, event.negotiation_id, "counter_proposals_ready_received", event.payload)
+        self._emit(StateEvent(
+            event_type=event.event_type,
+            tenant_id=event.tenant_id,
+            negotiation_id=event.negotiation_id,
+            workflow_id=event.workflow_id,
+            payload={
+                **event.payload,
+                "contract_type": row.contract_type,
+                "counterparty_description": row.counterparty_description,
+            },
+            emitted_at=datetime.now(timezone.utc),
+            emitted_by="state_manager",
+        ))
+
+    def _handle_lrs_ready(self, context: TenantContext, event: StateEvent) -> None:
+        """LRS document has been generated. Audit and re-emit for Agent 8 (delivery)."""
+        self._audit_write(context, event.negotiation_id, "lrs_ready_received", event.payload)
         self._emit(event)
 
     def _handle_negotiation_paused(self, context: TenantContext, event: StateEvent) -> None:

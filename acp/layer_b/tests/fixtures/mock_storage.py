@@ -29,6 +29,11 @@ class MockStorageAdapter(StorageAdapter):
         """All paths currently held in the mock store."""
         return set(self._files.keys())
 
+    @property
+    def stored_data(self) -> dict[str, bytes]:
+        """Direct access to the backing store for test manipulation (e.g. pop to simulate missing files)."""
+        return self._files
+
     def exists(self, path: str) -> bool:
         return path in self._files
 
