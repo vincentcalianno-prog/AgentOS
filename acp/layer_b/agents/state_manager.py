@@ -25,6 +25,7 @@ from acp.layer_b.core.adapters.audit_adapter import AuditEvent, AuditLogAdapter
 from acp.layer_b.core.adapters.ledger_adapter import LedgerAdapter
 from acp.layer_b.core.tenancy import TenancyEnforcer
 from acp.layer_b.core.types import (
+    EVENT_DIFF_COMPLETE,
     EVENT_DOCUMENT_EXTRACTED,
     EVENT_DOCUMENT_EXTRACTION_REQUIRED,
     EVENT_INBOUND_REDLINE_RECEIVED,
@@ -347,6 +348,7 @@ class StateManager:
             EVENT_OUTBOUND_CONTRACT_SENT: self._handle_outbound_contract_sent,
             EVENT_INBOUND_REDLINE_RECEIVED: self._handle_inbound_redline,
             EVENT_DOCUMENT_EXTRACTED: self._handle_document_extracted,
+            EVENT_DIFF_COMPLETE: self._handle_diff_complete,
             EVENT_LRS_DELIVERED: self._handle_lrs_delivered,
             EVENT_LRS_APPROVED: self._handle_lrs_approved,
             EVENT_LRS_RETURNED: self._handle_lrs_returned,
@@ -439,19 +441,35 @@ class StateManager:
         if updates:
             self.update_fields(context, event.negotiation_id, updates)
 
+        # Fetch row after updates to get current outbound path and folder path
+        row = self.get_negotiation(context, event.negotiation_id)
+
         # Emit: round is ready for structural diff (Agent 4 subscribes to this)
         self._emit(StateEvent(
             event_type=EVENT_ROUND_READY_FOR_ANALYSIS,
             tenant_id=event.tenant_id,
             negotiation_id=event.negotiation_id,
             payload={
-                "storage_path": event.payload.get("storage_path"),
+                "counterparty_document_path": event.payload.get("storage_path"),
+                "outbound_document_path": row.last_outbound_version_sent,
+                "storage_folder_path": row.storage_folder_path,
                 "round_number": event.payload.get("round_number"),
                 "fingerprint": event.payload.get("fingerprint"),
             },
             emitted_at=datetime.now(timezone.utc),
             emitted_by="state_manager",
         ))
+
+    def _handle_diff_complete(self, context: TenantContext, event: StateEvent) -> None:
+        """Structural diff is complete. Transition negotiation to NEGOTIATING and re-emit."""
+        self.transition_state(
+            context, event.negotiation_id,
+            NegotiationState.NEGOTIATING,
+            reason=f"Structural diff complete, round {event.payload.get('round_number')} (event from {event.emitted_by})",
+        )
+        self._audit_write(context, event.negotiation_id, "diff_complete_received", event.payload)
+        # Re-emit so Agent 5 can subscribe to State Manager like all other downstream agents
+        self._emit(event)
 
     def _handle_negotiation_paused(self, context: TenantContext, event: StateEvent) -> None:
         """The row owner has paused automation on this negotiation. Principle 2.9 (Opt-Out)."""

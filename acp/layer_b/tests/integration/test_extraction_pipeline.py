@@ -152,7 +152,7 @@ class ExtractionEventToStateManagerTests(unittest.TestCase):
     def test_round_ready_event_carries_storage_path(self):
         self.extractor.process_event(self.ctx, self._make_extraction_event())
         evt = next(e for e in self.downstream if e.event_type == EVENT_ROUND_READY_FOR_ANALYSIS)
-        self.assertIsNotNone(evt.payload.get("storage_path"))
+        self.assertIsNotNone(evt.payload.get("counterparty_document_path"))
 
     def test_round_ready_event_carries_round_number(self):
         self.extractor.process_event(self.ctx, self._make_extraction_event())
