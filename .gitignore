@@ -34,3 +34,6 @@ service_account.json
 # OS
 .DS_Store
 Thumbs.db
+
+# Dry-run harness outputs (timestamped run directories)
+scripts/real_redline_dry_run/outputs/*/
