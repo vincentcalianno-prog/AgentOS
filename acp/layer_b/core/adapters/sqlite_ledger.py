@@ -5,9 +5,11 @@ is used by the test suite. It contains no deployment-specific values.
 
 Tables:
     negotiations(tenant_id, negotiation_id, ...all NegotiationRow fields)
+    event_retries(retry_id, ...all EventRetryRow fields)
 
-PRIMARY KEY is (tenant_id, negotiation_id). Cross-tenant uniqueness of
-negotiation_id is also enforced at the application layer through get_owner().
+PRIMARY KEY for negotiations is (tenant_id, negotiation_id). Cross-tenant
+uniqueness of negotiation_id is also enforced at the application layer through
+get_owner(). PRIMARY KEY for event_retries is retry_id (globally unique UUID).
 """
 
 from __future__ import annotations
@@ -19,7 +21,7 @@ from datetime import datetime
 from typing import Optional
 
 from acp.layer_b.core.adapters.ledger_adapter import LedgerAdapter
-from acp.layer_b.core.types import NegotiationRow, NegotiationState
+from acp.layer_b.core.types import EventRetryRow, NegotiationRow, NegotiationState
 
 
 _SCHEMA = """
@@ -53,7 +55,66 @@ CREATE TABLE IF NOT EXISTS negotiations (
 
 CREATE INDEX IF NOT EXISTS idx_negotiations_by_id ON negotiations(negotiation_id);
 CREATE INDEX IF NOT EXISTS idx_negotiations_by_tenant ON negotiations(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_negotiations_by_thread ON negotiations(tenant_id, inbox_thread_id);
+
+CREATE TABLE IF NOT EXISTS event_retries (
+    retry_id TEXT PRIMARY KEY,
+    tenant_id TEXT NOT NULL,
+    negotiation_id TEXT NOT NULL,
+    workflow_id TEXT NOT NULL,
+    event_type TEXT NOT NULL,
+    payload_json TEXT NOT NULL DEFAULT '{}',
+    attempt_count INTEGER NOT NULL DEFAULT 0,
+    last_attempt_at TEXT,
+    last_error TEXT NOT NULL DEFAULT '',
+    status TEXT NOT NULL DEFAULT 'pending'
+);
+
+CREATE INDEX IF NOT EXISTS idx_retries_by_tenant ON event_retries(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_retries_by_status ON event_retries(status);
 """
+
+_RETRY_FIELD_ORDER = (
+    "retry_id, tenant_id, negotiation_id, workflow_id, event_type, "
+    "payload_json, attempt_count, last_attempt_at, last_error, status"
+)
+_RETRY_NUM_FIELDS = len(_RETRY_FIELD_ORDER.split(", "))
+
+
+def _retry_row_to_db_tuple(row: EventRetryRow) -> tuple:
+    """Convert an EventRetryRow to a database tuple."""
+    return (
+        row.retry_id,
+        row.tenant_id,
+        row.negotiation_id,
+        row.workflow_id,
+        row.event_type,
+        row.payload_json,
+        row.attempt_count,
+        row.last_attempt_at.isoformat() if row.last_attempt_at else None,
+        row.last_error,
+        row.status,
+    )
+
+
+def _db_tuple_to_retry_row(t: tuple) -> EventRetryRow:
+    """Convert a database tuple to an EventRetryRow."""
+    (
+        retry_id, tenant_id, negotiation_id, workflow_id, event_type,
+        payload_json, attempt_count, last_attempt_at_str, last_error, status,
+    ) = t
+    return EventRetryRow(
+        retry_id=retry_id,
+        tenant_id=tenant_id,
+        negotiation_id=negotiation_id,
+        workflow_id=workflow_id,
+        event_type=event_type,
+        payload_json=payload_json,
+        attempt_count=attempt_count,
+        last_attempt_at=datetime.fromisoformat(last_attempt_at_str) if last_attempt_at_str else None,
+        last_error=last_error,
+        status=status,
+    )
 
 
 def _row_to_db_tuple(row: NegotiationRow, tenant_id: str) -> tuple:
@@ -191,6 +252,61 @@ class SQLiteLedger(LedgerAdapter):
                 "SELECT negotiation_id, tenant_id FROM negotiations"
             )
             return {nid: tid for nid, tid in cur.fetchall()}
+
+    def get_row_by_thread_id(self, tenant_id: str, thread_id: str) -> Optional[NegotiationRow]:
+        with self._lock:
+            cur = self._conn.execute(
+                f"SELECT {_FIELD_ORDER} FROM negotiations "
+                "WHERE tenant_id = ? AND inbox_thread_id = ? LIMIT 1",
+                (tenant_id, thread_id),
+            )
+            row = cur.fetchone()
+        if row is None:
+            return None
+        return _db_tuple_to_row(row)
+
+    # ------------------------------------------------------------------ #
+    # Retry state                                                          #
+    # ------------------------------------------------------------------ #
+
+    def get_retry_state(self, retry_id: str) -> Optional[EventRetryRow]:
+        with self._lock:
+            cur = self._conn.execute(
+                f"SELECT {_RETRY_FIELD_ORDER} FROM event_retries WHERE retry_id = ?",
+                (retry_id,),
+            )
+            row = cur.fetchone()
+        if row is None:
+            return None
+        return _db_tuple_to_retry_row(row)
+
+    def upsert_retry_state(self, row: EventRetryRow) -> None:
+        db_tuple = _retry_row_to_db_tuple(row)
+        placeholders = ", ".join(["?"] * _RETRY_NUM_FIELDS)
+        with self._lock:
+            self._conn.execute(
+                f"INSERT OR REPLACE INTO event_retries ({_RETRY_FIELD_ORDER}) VALUES ({placeholders})",
+                db_tuple,
+            )
+            self._conn.commit()
+
+    def list_pending_retries(self, tenant_id: Optional[str] = None) -> list[EventRetryRow]:
+        with self._lock:
+            if tenant_id is not None:
+                cur = self._conn.execute(
+                    f"SELECT {_RETRY_FIELD_ORDER} FROM event_retries "
+                    "WHERE status IN ('pending', 'in_progress') AND tenant_id = ? "
+                    "ORDER BY retry_id",
+                    (tenant_id,),
+                )
+            else:
+                cur = self._conn.execute(
+                    f"SELECT {_RETRY_FIELD_ORDER} FROM event_retries "
+                    "WHERE status IN ('pending', 'in_progress') "
+                    "ORDER BY retry_id",
+                )
+            rows = cur.fetchall()
+        return [_db_tuple_to_retry_row(r) for r in rows]
 
     def close(self):
         with self._lock:

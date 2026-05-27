@@ -238,6 +238,40 @@ EVENT_LRS_APPROVED = "lrs_approved"
 EVENT_LRS_RETURNED = "lrs_returned"
 EVENT_NEGOTIATION_PAUSED = "negotiation_paused"
 EVENT_NEGOTIATION_RESUMED = "negotiation_resumed"
+EVENT_NOTIFICATION_REQUIRED = "notification_required"
+EVENT_NEGOTIATION_FAILED = "negotiation_failed"
+EVENT_RETRY_REQUIRED = "retry_required"
+EVENT_RETRY_EXHAUSTED = "retry_exhausted"
+EVENT_SLA_BREACH_DETECTED = "sla_breach_detected"   # emitted by Agent 8 scan_sla_violations()
+
+
+# ============================================================
+# Retry State
+# ============================================================
+
+@dataclass
+class EventRetryRow:
+    """Persistent retry state for a failed event in the pipeline.
+
+    Agent 8 (Workflow Orchestrator) creates and updates these rows when it
+    receives EVENT_NEGOTIATION_FAILED or EVENT_RETRY_REQUIRED. The ledger
+    persists them so retry state survives process restarts.
+
+    status lifecycle: "pending" → "in_progress" → "exhausted"
+    payload_json stores the original event payload so re-emits carry the full
+    context — without it, reconstructed events would have stub payloads that
+    break downstream agents.
+    """
+    retry_id: str
+    tenant_id: str
+    negotiation_id: str
+    workflow_id: str
+    event_type: str          # the event type that needs to be retried
+    payload_json: str        # json.dumps() of the original event payload
+    attempt_count: int
+    last_attempt_at: Optional[datetime]
+    last_error: str
+    status: str              # "pending" | "in_progress" | "exhausted"
 
 
 # ============================================================

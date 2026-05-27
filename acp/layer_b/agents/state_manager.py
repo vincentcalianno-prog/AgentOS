@@ -35,9 +35,13 @@ from acp.layer_b.core.types import (
     EVENT_LRS_APPROVED,
     EVENT_LRS_DELIVERED,
     EVENT_LRS_RETURNED,
+    EVENT_NEGOTIATION_FAILED,
     EVENT_NEGOTIATION_PAUSED,
     EVENT_NEGOTIATION_RESUMED,
+    EVENT_NOTIFICATION_REQUIRED,
     EVENT_OUTBOUND_CONTRACT_SENT,
+    EVENT_RETRY_EXHAUSTED,
+    EVENT_RETRY_REQUIRED,
     EVENT_ROUND_READY_FOR_ANALYSIS,
     InvalidTransitionError,
     NegotiationNotFoundError,
@@ -360,6 +364,11 @@ class StateManager:
             EVENT_LRS_RETURNED: self._handle_lrs_returned,
             EVENT_NEGOTIATION_PAUSED: self._handle_negotiation_paused,
             EVENT_NEGOTIATION_RESUMED: self._handle_negotiation_resumed,
+            # Agent 8 events — forwarded to Agent 8 subscriber; SM audits and passes through
+            EVENT_NEGOTIATION_FAILED: self._handle_platform_passthrough,
+            EVENT_RETRY_REQUIRED: self._handle_platform_passthrough,
+            EVENT_RETRY_EXHAUSTED: self._handle_platform_passthrough,
+            EVENT_NOTIFICATION_REQUIRED: self._handle_platform_passthrough,
         }
 
     def _handle_outbound_contract_sent(self, context: TenantContext, event: StateEvent) -> None:
@@ -448,8 +457,13 @@ class StateManager:
         if updates:
             self.update_fields(context, event.negotiation_id, updates)
 
-        # Fetch row after updates to get current outbound path and folder path
+        # Fetch row after updates to get current outbound path, folder path, and automation status
         row = self.get_negotiation(context, event.negotiation_id)
+
+        if self._is_paused(row):
+            self._audit_write(context, event.negotiation_id, "pipeline_gated_paused",
+                              {"event_type": event.event_type})
+            return
 
         # Emit: round is ready for structural diff (Agent 4 subscribes to this)
         self._emit(StateEvent(
@@ -476,12 +490,24 @@ class StateManager:
             reason=f"Structural diff complete, round {event.payload.get('round_number')} (event from {event.emitted_by})",
         )
         self._audit_write(context, event.negotiation_id, "diff_complete_received", event.payload)
+
+        if self._is_paused(self.get_negotiation(context, event.negotiation_id)):
+            self._audit_write(context, event.negotiation_id, "pipeline_gated_paused",
+                              {"event_type": event.event_type})
+            return
+
         # Re-emit so Agent 5 can subscribe to State Manager like all other downstream agents
         self._emit(event)
 
     def _handle_analysis_complete(self, context: TenantContext, event: StateEvent) -> None:
         """Redline analysis is complete. Audit and re-emit for Agent 6."""
         self._audit_write(context, event.negotiation_id, "analysis_complete_received", event.payload)
+
+        if self._is_paused(self.get_negotiation(context, event.negotiation_id)):
+            self._audit_write(context, event.negotiation_id, "pipeline_gated_paused",
+                              {"event_type": event.event_type})
+            return
+
         self._emit(event)
 
     def _handle_counter_proposals_ready(self, context: TenantContext, event: StateEvent) -> None:
@@ -492,6 +518,12 @@ class StateManager:
         """
         row = self.get_negotiation(context, event.negotiation_id)
         self._audit_write(context, event.negotiation_id, "counter_proposals_ready_received", event.payload)
+
+        if self._is_paused(row):
+            self._audit_write(context, event.negotiation_id, "pipeline_gated_paused",
+                              {"event_type": event.event_type})
+            return
+
         self._emit(StateEvent(
             event_type=event.event_type,
             tenant_id=event.tenant_id,
@@ -507,8 +539,14 @@ class StateManager:
         ))
 
     def _handle_lrs_ready(self, context: TenantContext, event: StateEvent) -> None:
-        """LRS document has been generated. Audit and re-emit for Agent 8 (delivery)."""
+        """LRS document has been generated. Audit and re-emit for delivery."""
         self._audit_write(context, event.negotiation_id, "lrs_ready_received", event.payload)
+
+        if self._is_paused(self.get_negotiation(context, event.negotiation_id)):
+            self._audit_write(context, event.negotiation_id, "pipeline_gated_paused",
+                              {"event_type": event.event_type})
+            return
+
         self._emit(event)
 
     def _handle_negotiation_paused(self, context: TenantContext, event: StateEvent) -> None:
@@ -524,6 +562,18 @@ class StateManager:
             context, event.negotiation_id,
             {"automation_status": "Active"},
         )
+
+    def _handle_platform_passthrough(self, context: TenantContext, event: StateEvent) -> None:
+        """Platform events (Agent 8 lifecycle events) are audited and re-emitted.
+
+        EVENT_NEGOTIATION_FAILED, RETRY_REQUIRED, RETRY_EXHAUSTED, and
+        NOTIFICATION_REQUIRED are platform-level signals. The State Manager
+        forwards them to subscribers (Agent 8 is a subscriber) and audits the
+        passthrough. The SM does not mutate negotiation state for these events.
+        """
+        self._audit_write(context, event.negotiation_id, f"platform_event_forwarded",
+                          {"event_type": event.event_type})
+        self._emit(event)
 
     # ============================================================
     # Internal helpers
@@ -559,6 +609,16 @@ class StateManager:
             if tenant_id not in self._tenant_locks:
                 self._tenant_locks[tenant_id] = threading.Lock()
             return self._tenant_locks[tenant_id]
+
+    @staticmethod
+    def _is_paused(row: NegotiationRow) -> bool:
+        """Return True if the negotiation has automation_status='Paused'.
+
+        Used by re-emit handlers (Agents 4–7 pipeline) to gate further events.
+        Per Architecture Spec Principle 2.9 (Opt-Out): a paused negotiation
+        does not receive pipeline events until the operator resumes it.
+        """
+        return row.automation_status == "Paused"
 
     def _audit_write(
         self,
