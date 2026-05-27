@@ -32,6 +32,7 @@ def make_fixed_drafter(
         original_text: str,
         counterparty_text: str,
         playbook_context: str,
+        restore_strategy: str = "redraft",
     ) -> CounterProposalDraft:
         return CounterProposalDraft(
             clause_reference=clause_reference,
@@ -62,6 +63,7 @@ def make_clause_map_drafter(
         original_text: str,
         counterparty_text: str,
         playbook_context: str,
+        restore_strategy: str = "redraft",
     ) -> CounterProposalDraft:
         if clause_reference in mapping:
             return mapping[clause_reference]

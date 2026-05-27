@@ -27,10 +27,10 @@ from acp.layer_b.core.types import (
 )
 
 # Type alias: injectable LLM call.
-# (clause_reference, change_type, original_text, counterparty_text, playbook_context)
-# → ClauseRecommendation
+# (clause_reference, change_type, original_text, counterparty_text, playbook_context,
+#  round_number) → ClauseRecommendation
 # In production: backed by Anthropic SDK in layer_c_antora. In tests: deterministic lambda.
-AnalyzeClauseFn = Callable[[str, str, str, str, str], "ClauseRecommendation"]
+AnalyzeClauseFn = Callable[[str, str, str, str, str, int], "ClauseRecommendation"]
 
 EventHandler = Callable[[StateEvent], None]
 
@@ -46,6 +46,7 @@ class ClauseRecommendation:
     playbook_reference: Optional[str]
     confidence: str              # "high" | "medium" | "low"
     requires_legal_review: bool
+    is_signature_blocker: bool = False  # True if this clause must be resolved before signature
 
 
 def _null_analyzer(
@@ -54,6 +55,7 @@ def _null_analyzer(
     original_text: str,
     counterparty_text: str,
     playbook_context: str,
+    round_number: int = 0,
 ) -> ClauseRecommendation:
     """Default stub: escalates everything. Swap in LLM-backed impl in production."""
     return ClauseRecommendation(
@@ -145,7 +147,7 @@ class RedlineAnalyzer:
         for entry in entries:
             if entry.get("change_type") == "unchanged":
                 continue
-            rec = self._analyze_entry(context, event.negotiation_id, entry)
+            rec = self._analyze_entry(context, event.negotiation_id, entry, round_number)
             if rec is not None:
                 recommendations.append(rec)
 
@@ -207,6 +209,7 @@ class RedlineAnalyzer:
         context: TenantContext,
         negotiation_id: str,
         entry: dict,
+        round_number: int = 0,
     ) -> Optional[ClauseRecommendation]:
         """Call analyze_clause for one diff entry. On failure returns a safe escalation."""
         clause_ref = entry.get("clause_reference", "")
@@ -220,6 +223,7 @@ class RedlineAnalyzer:
                 original_text,
                 counterparty_text,
                 self._playbook_context,
+                round_number,
             )
             self._audit_write(
                 context, negotiation_id,

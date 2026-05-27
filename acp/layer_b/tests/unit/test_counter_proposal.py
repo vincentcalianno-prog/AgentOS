@@ -132,7 +132,8 @@ class SkippedClausesTests(unittest.TestCase):
         self.drafted_refs: list[str] = []
 
         def _tracking_drafter(clause_reference, recommendation, reasoning_from_analysis,
-                               original_text, counterparty_text, playbook_context):
+                               original_text, counterparty_text, playbook_context,
+                               restore_strategy="redraft"):
             self.drafted_refs.append(clause_reference)
             return CounterProposalDraft(
                 clause_reference=clause_reference,
@@ -273,7 +274,8 @@ class LLMFailureTests(unittest.TestCase):
         ])
 
         def _failing_on_1_1(clause_reference, recommendation, reasoning_from_analysis,
-                             original_text, counterparty_text, playbook_context):
+                             original_text, counterparty_text, playbook_context,
+                             restore_strategy="redraft"):
             if clause_reference == "1.1":
                 raise RuntimeError("LLM timeout")
             return CounterProposalDraft(
@@ -422,6 +424,7 @@ class AuditTrailTests(unittest.TestCase):
         def _context_capturing_drafter(
             clause_reference, recommendation, reasoning_from_analysis,
             original_text, counterparty_text, playbook_context,
+            restore_strategy="redraft",
         ):
             received_contexts.append(playbook_context)
             return CounterProposalDraft(
@@ -445,3 +448,141 @@ class AuditTrailTests(unittest.TestCase):
         )
         agent.process_event(TenantContext(tenant_id="alice"), _make_event())
         self.assertEqual(received_contexts, ["generic agreement playbook v3"])
+
+
+class RestoreStrategyTests(unittest.TestCase):
+    """restore_strategy is auto-selected: 'verbatim' for signature blockers, 'redraft' otherwise."""
+
+    def test_non_blocker_clause_gets_redraft_strategy(self):
+        """Standard reject clause with no is_signature_blocker → restore_strategy='redraft'."""
+        received_strategies: list[str] = []
+
+        def _capturing_drafter(
+            clause_reference, recommendation, reasoning_from_analysis,
+            original_text, counterparty_text, playbook_context,
+            restore_strategy="redraft",
+        ):
+            received_strategies.append(restore_strategy)
+            return CounterProposalDraft(
+                clause_reference=clause_reference,
+                based_on_recommendation=recommendation,
+                original_text=original_text,
+                counterparty_text=counterparty_text,
+                counter_text="counter",
+                reasoning="ok",
+                tone="neutral",
+                playbook_reference=None,
+                requires_legal_review=False,
+            )
+
+        storage = MockStorageAdapter()
+        _seed_analysis(storage, [
+            _rec("1.1", "reject", "Reject.", "Net-30.", "Net-45."),
+        ])
+        agent, _, _ = _make_agent(storage, _capturing_drafter)
+        agent.process_event(TenantContext(tenant_id="alice"), _make_event())
+        self.assertEqual(received_strategies, ["redraft"])
+
+    def test_signature_blocker_with_original_text_gets_verbatim_strategy(self):
+        """Deleted indemnity clause marked as signature blocker → restore_strategy='verbatim'."""
+        received_strategies: list[str] = []
+
+        def _capturing_drafter(
+            clause_reference, recommendation, reasoning_from_analysis,
+            original_text, counterparty_text, playbook_context,
+            restore_strategy="redraft",
+        ):
+            received_strategies.append(restore_strategy)
+            return CounterProposalDraft(
+                clause_reference=clause_reference,
+                based_on_recommendation=recommendation,
+                original_text=original_text,
+                counterparty_text=counterparty_text,
+                counter_text="counter",
+                reasoning="ok",
+                tone="firm",
+                playbook_reference=None,
+                requires_legal_review=True,
+            )
+
+        storage = MockStorageAdapter()
+        # Inline dict to include is_signature_blocker
+        _seed_analysis(storage, [{
+            "clause_reference": "6.1",
+            "recommendation": "reject",
+            "reasoning": "Critical indemnity clause deleted.",
+            "original_text": "Indemnity shall be mutual and unlimited.",
+            "counterparty_text": "",
+            "is_signature_blocker": True,
+        }])
+        agent, _, _ = _make_agent(storage, _capturing_drafter)
+        agent.process_event(TenantContext(tenant_id="alice"), _make_event())
+        self.assertEqual(received_strategies, ["verbatim"])
+
+    def test_signature_blocker_without_original_text_gets_redraft_strategy(self):
+        """Signature blocker with no original_text (added clause) → 'redraft', not 'verbatim'."""
+        received_strategies: list[str] = []
+
+        def _capturing_drafter(
+            clause_reference, recommendation, reasoning_from_analysis,
+            original_text, counterparty_text, playbook_context,
+            restore_strategy="redraft",
+        ):
+            received_strategies.append(restore_strategy)
+            return CounterProposalDraft(
+                clause_reference=clause_reference,
+                based_on_recommendation=recommendation,
+                original_text=original_text,
+                counterparty_text=counterparty_text,
+                counter_text="counter",
+                reasoning="ok",
+                tone="neutral",
+                playbook_reference=None,
+                requires_legal_review=True,
+            )
+
+        storage = MockStorageAdapter()
+        _seed_analysis(storage, [{
+            "clause_reference": "4.1",
+            "recommendation": "reject",
+            "reasoning": "Unacceptable new clause added.",
+            "original_text": "",  # no original — nothing to restore verbatim
+            "counterparty_text": "New onerous clause.",
+            "is_signature_blocker": True,
+        }])
+        agent, _, _ = _make_agent(storage, _capturing_drafter)
+        agent.process_event(TenantContext(tenant_id="alice"), _make_event())
+        self.assertEqual(received_strategies, ["redraft"])
+
+
+class SignatureBlockerPayloadTests(unittest.TestCase):
+    """signature_blockers list is included in EVENT_COUNTER_PROPOSALS_READY payload."""
+
+    def test_signature_blockers_empty_when_no_blockers(self):
+        storage = MockStorageAdapter()
+        _seed_analysis(storage, [
+            _rec("1.1", "reject", "Reject.", "Original.", "Counterparty."),
+        ])
+        agent, _, captured = _make_agent(storage, make_fixed_drafter("counter"))
+        agent.process_event(TenantContext(tenant_id="alice"), _make_event())
+        evt = next(e for e in captured if e.event_type == EVENT_COUNTER_PROPOSALS_READY)
+        self.assertEqual(evt.payload.get("signature_blockers"), [])
+
+    def test_signature_blockers_contains_blocker_clause_refs(self):
+        storage = MockStorageAdapter()
+        _seed_analysis(storage, [
+            {
+                "clause_reference": "6.1",
+                "recommendation": "reject",
+                "reasoning": "Critical deletion.",
+                "original_text": "Indemnity text.",
+                "counterparty_text": "",
+                "is_signature_blocker": True,
+            },
+            _rec("1.1", "reject", "Reject.", "Original.", "Counterparty."),
+        ])
+        agent, _, captured = _make_agent(storage, make_fixed_drafter("counter"))
+        agent.process_event(TenantContext(tenant_id="alice"), _make_event())
+        evt = next(e for e in captured if e.event_type == EVENT_COUNTER_PROPOSALS_READY)
+        self.assertIn("6.1", evt.payload.get("signature_blockers", []))
+        self.assertNotIn("1.1", evt.payload.get("signature_blockers", []))

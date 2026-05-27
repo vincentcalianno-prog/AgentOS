@@ -52,6 +52,7 @@ class DiffEntry:
     counterparty_text: str    # text from counterparty version; empty string if deleted
     surrounding_context: str  # adjacent clause references for reviewer orientation
     character_delta: int      # len(counterparty_text) - len(original_text)
+    modification_type: str = "modified"  # "modified" | "accepted_with_addition" | change_type for non-modified
 
 
 def _null_parser(content: bytes) -> list[Clause]:
@@ -309,6 +310,17 @@ def _diff_clauses(
         else:
             change_type = "deleted"
 
+        # Compute modification_type: detect "accepted_with_addition" hybrid pattern.
+        # Applies when counterparty kept the original text verbatim and appended more.
+        if change_type == "modified":
+            orig_stripped = orig.strip()
+            if orig_stripped and orig_stripped in cp and len(cp.strip()) > len(orig_stripped):
+                modification_type = "accepted_with_addition"
+            else:
+                modification_type = "modified"
+        else:
+            modification_type = change_type
+
         # Surrounding context: adjacent references in ordered list
         prev_ref = ordered_refs[i - 1] if i > 0 else ""
         next_ref = ordered_refs[i + 1] if i < len(ordered_refs) - 1 else ""
@@ -321,6 +333,7 @@ def _diff_clauses(
             counterparty_text=cp,
             surrounding_context=context_str,
             character_delta=len(cp) - len(orig),
+            modification_type=modification_type,
         ))
 
     return entries

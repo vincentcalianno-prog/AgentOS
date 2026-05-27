@@ -19,9 +19,9 @@ from __future__ import annotations
 
 import json
 import uuid
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime, timezone
-from typing import Callable, Optional
+from typing import Callable, List, Optional
 
 from acp.layer_b.core.adapters.audit_adapter import AuditEvent, AuditLogAdapter
 from acp.layer_b.core.adapters.storage_adapter import StorageAdapter
@@ -64,6 +64,11 @@ class LRSInput:
     diff: dict                  # structural_diff.json content; {} if missing
     analysis: dict              # redline_analysis.json content; {} if missing
     counter_proposals: dict     # counter_proposals.json content; {} if missing
+    prior_round_summary: Optional[str] = None        # narrative summary of prior round, if any
+    operator_position: Optional[str] = None          # operator's overall stance for legal reviewer
+    signature_blockers: List[str] = field(default_factory=list)  # clause refs that must resolve before signing
+    risk_summary: Optional[str] = None               # high-level risk narrative for legal reviewer
+    counterparty_profile_ref: Optional[str] = None  # slug/ID for counterparty profile reference
 
 
 @dataclass(frozen=True)
@@ -192,6 +197,11 @@ class LRSGeneratorAgent:
             diff=diff,
             analysis=analysis,
             counter_proposals=counter_proposals_doc,
+            prior_round_summary=event.payload.get("prior_round_summary"),
+            operator_position=event.payload.get("operator_position"),
+            signature_blockers=event.payload.get("signature_blockers", []),
+            risk_summary=event.payload.get("risk_summary"),
+            counterparty_profile_ref=event.payload.get("counterparty_profile_ref"),
         )
 
         try:

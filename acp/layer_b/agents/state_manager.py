@@ -533,6 +533,11 @@ class StateManager:
                 **event.payload,
                 "contract_type": row.contract_type,
                 "counterparty_description": row.counterparty_description,
+                "signature_blockers": event.payload.get("signature_blockers", []),
+                "counterparty_profile_ref": (
+                    row.counterparty_profile_ref
+                    or _slugify(row.counterparty_description or "unknown")
+                ),
             },
             emitted_at=datetime.now(timezone.utc),
             emitted_by="state_manager",

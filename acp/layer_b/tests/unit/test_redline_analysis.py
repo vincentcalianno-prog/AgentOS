@@ -181,7 +181,7 @@ class UnchangedClausesSkippedTests(unittest.TestCase):
     def test_analyze_clause_not_called_for_unchanged(self):
         call_log: list[str] = []
 
-        def tracking_analyzer(ref, change_type, orig, cp, ctx):
+        def tracking_analyzer(ref, change_type, orig, cp, ctx, round_number=0):
             call_log.append(ref)
             return ClauseRecommendation(
                 clause_reference=ref,
@@ -310,7 +310,7 @@ class LLMFailureTests(unittest.TestCase):
         ])
 
     def test_failing_clause_gets_escalate_recommendation(self):
-        def flaky_analyzer(ref, change_type, orig, cp, ctx):
+        def flaky_analyzer(ref, change_type, orig, cp, ctx, round_number=0):
             if ref == "1.1":
                 raise RuntimeError("LLM timeout")
             return ClauseRecommendation(
@@ -330,7 +330,7 @@ class LLMFailureTests(unittest.TestCase):
         self.assertTrue(recs["1.1"]["requires_legal_review"])
 
     def test_other_clauses_still_processed_after_failure(self):
-        def flaky_analyzer(ref, change_type, orig, cp, ctx):
+        def flaky_analyzer(ref, change_type, orig, cp, ctx, round_number=0):
             if ref == "1.1":
                 raise RuntimeError("LLM timeout")
             return ClauseRecommendation(
@@ -349,7 +349,7 @@ class LLMFailureTests(unittest.TestCase):
         self.assertEqual(recs["2.2"]["recommendation"], "accept")
 
     def test_event_still_emitted_after_partial_failure(self):
-        def flaky_analyzer(ref, change_type, orig, cp, ctx):
+        def flaky_analyzer(ref, change_type, orig, cp, ctx, round_number=0):
             if ref == "1.1":
                 raise RuntimeError("LLM timeout")
             return ClauseRecommendation(
@@ -367,7 +367,7 @@ class LLMFailureTests(unittest.TestCase):
         self.assertEqual(events[0].event_type, EVENT_ANALYSIS_COMPLETE)
 
     def test_failure_is_audited(self):
-        def bad_analyzer(ref, change_type, orig, cp, ctx):
+        def bad_analyzer(ref, change_type, orig, cp, ctx, round_number=0):
             raise RuntimeError("LLM error")
 
         storage = MockStorageAdapter()
@@ -487,7 +487,7 @@ class AuditTrailTests(unittest.TestCase):
     def test_playbook_context_is_passed_to_analyzer(self):
         received_contexts: list[str] = []
 
-        def tracking_analyzer(ref, change_type, orig, cp, ctx):
+        def tracking_analyzer(ref, change_type, orig, cp, ctx, round_number=0):
             received_contexts.append(ctx)
             return ClauseRecommendation(
                 clause_reference=ref,
@@ -503,3 +503,58 @@ class AuditTrailTests(unittest.TestCase):
         agent, _, _ = _make_agent(storage, tracking_analyzer, playbook_context="generic agreement playbook v3")
         agent.process_event(_alice(), _make_event())
         self.assertEqual(received_contexts, ["generic agreement playbook v3"])
+
+    def test_round_number_is_passed_to_analyzer(self):
+        received_rounds: list[int] = []
+
+        def tracking_analyzer(ref, change_type, orig, cp, ctx, round_number=0):
+            received_rounds.append(round_number)
+            return ClauseRecommendation(
+                clause_reference=ref,
+                recommendation="accept",
+                reasoning="ok",
+                playbook_reference=None,
+                confidence="high",
+                requires_legal_review=False,
+            )
+
+        storage = MockStorageAdapter()
+        _seed_diff(storage, [_modified_entry("1.1")], round_number=3)
+        agent, _, _ = _make_agent(storage, tracking_analyzer)
+        agent.process_event(_alice(), _make_event(round_number=3))
+        self.assertEqual(received_rounds, [3])
+
+
+class SignatureBlockerTests(unittest.TestCase):
+    """is_signature_blocker flag is preserved in analysis output."""
+
+    def test_is_signature_blocker_defaults_to_false(self):
+        """Standard recommendation has is_signature_blocker=False."""
+        storage = MockStorageAdapter()
+        _seed_diff(storage, [_modified_entry("1.1")])
+        agent, _, _ = _make_agent(storage, REJECT_ALL)
+        agent.process_event(_alice(), _make_event())
+        doc = json.loads(storage.retrieve(_ANALYSIS_PATH).decode())
+        rec = doc["recommendations"][0]
+        self.assertFalse(rec.get("is_signature_blocker", False))
+
+    def test_is_signature_blocker_true_preserved_in_json(self):
+        """Analyzer that marks a clause as signature_blocker=True is reflected in JSON."""
+        def blocker_analyzer(ref, change_type, orig, cp, ctx, round_number=0):
+            return ClauseRecommendation(
+                clause_reference=ref,
+                recommendation="reject",
+                reasoning="Critical indemnity clause deleted.",
+                playbook_reference=None,
+                confidence="high",
+                requires_legal_review=True,
+                is_signature_blocker=True,
+            )
+
+        storage = MockStorageAdapter()
+        _seed_diff(storage, [_deleted_entry("6.1")])
+        agent, _, _ = _make_agent(storage, blocker_analyzer)
+        agent.process_event(_alice(), _make_event())
+        doc = json.loads(storage.retrieve(_ANALYSIS_PATH).decode())
+        rec = doc["recommendations"][0]
+        self.assertTrue(rec["is_signature_blocker"])

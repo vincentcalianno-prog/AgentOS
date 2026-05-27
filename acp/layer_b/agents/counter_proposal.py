@@ -33,9 +33,9 @@ _DRAFTABLE_RECOMMENDATIONS = frozenset({"negotiate", "reject"})
 
 # Type alias: injectable LLM call.
 # (clause_reference, recommendation, reasoning_from_analysis, original_text,
-#  counterparty_text, playbook_context) → CounterProposalDraft
+#  counterparty_text, playbook_context, restore_strategy) → CounterProposalDraft
 # In production: Sonnet-tier LLM in layer_c_antora. In tests: deterministic stub.
-DraftCounterProposalFn = Callable[[str, str, str, str, str, str], "CounterProposalDraft"]
+DraftCounterProposalFn = Callable[[str, str, str, str, str, str, str], "CounterProposalDraft"]
 
 EventHandler = Callable[[StateEvent], None]
 
@@ -63,6 +63,7 @@ def _null_drafter(
     original_text: str,
     counterparty_text: str,
     playbook_context: str,
+    restore_strategy: str = "redraft",
 ) -> CounterProposalDraft:
     """Default stub: returns empty draft. Swap in LLM-backed impl in production."""
     return CounterProposalDraft(
@@ -165,6 +166,13 @@ class CounterProposalAgent:
             draft = self._draft_one(context, event.negotiation_id, rec)
             drafts.append(draft)
 
+        # Collect signature blocker clause references for downstream LRS enrichment
+        signature_blocker_refs = [
+            rec["clause_reference"]
+            for rec in recommendations
+            if rec.get("is_signature_blocker", False)
+        ]
+
         # Step 3: Build summary
         summary = _build_summary(drafts)
 
@@ -201,6 +209,7 @@ class CounterProposalAgent:
                     "proposals_path": proposals_path,
                     "round_number": round_number,
                     "summary": summary,
+                    "signature_blockers": signature_blocker_refs,
                 },
                 emitted_at=datetime.now(timezone.utc),
                 emitted_by=self.AGENT_NAME,
@@ -230,6 +239,13 @@ class CounterProposalAgent:
         reasoning_from_analysis = rec.get("reasoning", "")
         original_text = rec.get("original_text", "")
         counterparty_text = rec.get("counterparty_text", "")
+
+        # Auto-select restore_strategy: signature blockers with original text → verbatim restore
+        if rec.get("is_signature_blocker", False) and original_text:
+            restore_strategy = "verbatim"
+        else:
+            restore_strategy = "redraft"
+
         try:
             draft = self._draft_counter_proposal(
                 clause_ref,
@@ -238,6 +254,7 @@ class CounterProposalAgent:
                 original_text,
                 counterparty_text,
                 self._playbook_context,
+                restore_strategy,
             )
             self._audit_write(
                 context, negotiation_id,

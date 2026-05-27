@@ -372,3 +372,69 @@ class AuditTrailTests(unittest.TestCase):
         events = self.audit.query(agent_name="lrs_generator")
         for evt in events:
             self.assertEqual(evt.workflow_id, "contract_redline")
+
+
+class LRSInputEnrichmentTests(unittest.TestCase):
+    """LRSInput receives new enrichment fields from the event payload."""
+
+    def _run(self, extra_payload: dict) -> "LRSInput":
+        from acp.layer_b.agents.lrs_generator import LRSInput
+        received: list[LRSInput] = []
+
+        def _capturing_renderer(lrs_input: LRSInput):
+            from acp.layer_b.agents.lrs_generator import LRSOutput
+            received.append(lrs_input)
+            return LRSOutput(document_bytes=b"ok", document_format="txt", metadata={})
+
+        storage = MockStorageAdapter()
+        _seed_inputs(storage)
+        agent, _, _ = _make_agent(storage, _capturing_renderer)
+
+        from acp.layer_b.core.types import StateEvent, TenantContext
+        from datetime import datetime, timezone
+        event = StateEvent(
+            event_type=EVENT_COUNTER_PROPOSALS_READY,
+            tenant_id="alice",
+            negotiation_id="neg-001",
+            workflow_id="contract_redline",
+            payload={
+                "proposals_path": _PROPOSALS_PATH,
+                "round_number": 1,
+                "summary": {},
+                "contract_type": "generic-agreement",
+                "counterparty_description": "Acme Industrial - synthetic widget assembly",
+                **extra_payload,
+            },
+            emitted_at=datetime(2026, 1, 1, tzinfo=timezone.utc),
+            emitted_by="state_manager",
+        )
+        agent.process_event(TenantContext(tenant_id="alice"), event)
+        return received[0]
+
+    def test_signature_blockers_passed_to_lrs_input(self):
+        inp = self._run({"signature_blockers": ["6.1", "7.2"]})
+        self.assertEqual(inp.signature_blockers, ["6.1", "7.2"])
+
+    def test_signature_blockers_defaults_to_empty_list(self):
+        inp = self._run({})
+        self.assertEqual(inp.signature_blockers, [])
+
+    def test_counterparty_profile_ref_passed_to_lrs_input(self):
+        inp = self._run({"counterparty_profile_ref": "acme-industrial"})
+        self.assertEqual(inp.counterparty_profile_ref, "acme-industrial")
+
+    def test_counterparty_profile_ref_defaults_to_none(self):
+        inp = self._run({})
+        self.assertIsNone(inp.counterparty_profile_ref)
+
+    def test_prior_round_summary_passed_to_lrs_input(self):
+        inp = self._run({"prior_round_summary": "Round 1 ended in stalemate on payment terms."})
+        self.assertEqual(inp.prior_round_summary, "Round 1 ended in stalemate on payment terms.")
+
+    def test_operator_position_passed_to_lrs_input(self):
+        inp = self._run({"operator_position": "Hold firm on net-30."})
+        self.assertEqual(inp.operator_position, "Hold firm on net-30.")
+
+    def test_risk_summary_passed_to_lrs_input(self):
+        inp = self._run({"risk_summary": "High risk: indemnity cap deletion unresolved."})
+        self.assertEqual(inp.risk_summary, "High risk: indemnity cap deletion unresolved.")

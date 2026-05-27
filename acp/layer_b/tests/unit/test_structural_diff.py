@@ -427,3 +427,56 @@ class WrongEventTypeTests(unittest.TestCase):
         ))
         self.assertEqual(len(events), 0)
         self.assertEqual(len(storage.stored_paths), 0)
+
+
+class ModificationTypeTests(unittest.TestCase):
+    """modification_type field: standard vs. accepted_with_addition hybrid detection."""
+
+    def _run_diff(self, outbound_clauses, counterparty_clauses):
+        storage = MockStorageAdapter()
+        _seed_storage(storage)
+        agent, _, _ = _make_agent(storage, outbound_clauses, counterparty_clauses)
+        agent.process_event(_alice(), _make_event())
+        path = f"{_STORAGE_FOLDER}/{DIFF_FILENAME}"
+        return json.loads(storage.retrieve(path).decode())["entries"]
+
+    def test_plain_modified_clause_has_modification_type_modified(self):
+        """Counterparty replaces text entirely — modification_type is 'modified'."""
+        outbound = [Clause(reference="1.1", text="Payment terms are net-30.")]
+        counterparty = [Clause(reference="1.1", text="Payment terms are net-45.")]
+        entries = self._run_diff(outbound, counterparty)
+        entry = next(e for e in entries if e["clause_reference"] == "1.1")
+        self.assertEqual(entry["modification_type"], "modified")
+
+    def test_accepted_with_addition_detected(self):
+        """Counterparty keeps original verbatim and appends new text — modification_type is 'accepted_with_addition'."""
+        base_text = "Liability cap shall be limited to direct damages."
+        extra_text = " In no event shall indirect damages exceed the contract value."
+        outbound = [Clause(reference="2.9", text=base_text)]
+        counterparty = [Clause(reference="2.9", text=base_text + extra_text)]
+        entries = self._run_diff(outbound, counterparty)
+        entry = next(e for e in entries if e["clause_reference"] == "2.9")
+        self.assertEqual(entry["modification_type"], "accepted_with_addition")
+
+    def test_unchanged_clause_has_modification_type_unchanged(self):
+        """Unchanged clauses carry modification_type 'unchanged'."""
+        clauses = [Clause(reference="1.1", text="Same text.")]
+        entries = self._run_diff(clauses, clauses)
+        entry = next(e for e in entries if e["clause_reference"] == "1.1")
+        self.assertEqual(entry["modification_type"], "unchanged")
+
+    def test_added_clause_has_modification_type_added(self):
+        """Added clauses (counterparty only) carry modification_type 'added'."""
+        outbound = []
+        counterparty = [Clause(reference="4.1", text="Force majeure clause.")]
+        entries = self._run_diff(outbound, counterparty)
+        entry = next(e for e in entries if e["clause_reference"] == "4.1")
+        self.assertEqual(entry["modification_type"], "added")
+
+    def test_deleted_clause_has_modification_type_deleted(self):
+        """Deleted clauses (outbound only) carry modification_type 'deleted'."""
+        outbound = [Clause(reference="3.1", text="FOB origin clause.")]
+        counterparty = []
+        entries = self._run_diff(outbound, counterparty)
+        entry = next(e for e in entries if e["clause_reference"] == "3.1")
+        self.assertEqual(entry["modification_type"], "deleted")

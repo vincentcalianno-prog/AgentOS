@@ -33,6 +33,7 @@ def make_fixed_analyzer(
         original_text: str,
         counterparty_text: str,
         playbook_context: str,
+        round_number: int = 0,
     ) -> ClauseRecommendation:
         return ClauseRecommendation(
             clause_reference=clause_reference,
@@ -60,6 +61,7 @@ def make_clause_map_analyzer(
         original_text: str,
         counterparty_text: str,
         playbook_context: str,
+        round_number: int = 0,
     ) -> ClauseRecommendation:
         if clause_reference in mapping:
             return mapping[clause_reference]
