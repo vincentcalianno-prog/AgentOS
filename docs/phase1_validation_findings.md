@@ -350,3 +350,24 @@ The dry-run harness verified four of the five Phase A fixes propagate end-to-end
 **Recommended resolution:** Defer until Layer C implementation. When wiring real LLMs to analyze_clause, decide whether the prompt should produce original_text in its output (option A, simpler) or whether SM enrichment should cross-reference diff JSON (option B, lower duplication). Either approach is non-breaking.
 
 **Discovery method:** Dry-run harness smoke test (Phase B). Without the harness, this would not have been caught until Layer C wiring.
+
+### Finding G — Missing Executive Summary section in LRS
+
+The current LRS structure goes directly from metadata header to Diff Summary. Most real LRS documents lead with an Executive Summary that synthesizes the situation in 2-4 sentences ("Round 1 redlines received from Beta Manufacturing on MEPA. Five clauses modified, one critical deletion. Signature blocked pending resolution of 6.1 indemnity clause.").
+
+**Category:** 1 (schema gap on LRSInput) + 4 (renderer concern in Layer C).
+**Resolution:** Add executive_summary: Optional[str] field to LRSInput. Layer C renderer populates it from analysis aggregation. Mock renderer can populate with a templated stub.
+
+### Finding H — Missing Recommended Next Actions section
+
+The current LRS ends at counter-proposal drafts with no clear "what does the reader do next?" Sandelin needs to know: which clauses to escalate, which to accept, which to negotiate, deadline to respond.
+
+**Category:** 1 (schema gap) + 4 (renderer concern).
+**Resolution:** Add recommended_next_actions: list[str] field to LRSInput. Populated by analysis aggregation. Renderer surfaces as bulleted list at end of LRS.
+
+### Finding I — Counter-proposal section needs clause context
+
+Current rendering shows `**2.9** (negotiate): [STUB COUNTER for 2.9]` with no inline reminder of what 2.9 actually says or what the counterparty did to it. A reviewer reading this list out of context wouldn't know what they're countering.
+
+**Category:** 4 (renderer concern, Layer C).
+**Resolution:** Renderer should include excerpt of original text + counterparty modification adjacent to each counter-proposal draft, not just clause reference.
