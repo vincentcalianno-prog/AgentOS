@@ -335,3 +335,18 @@ For Clause 2.9 (hybrid modification), the outcome depends on how the document pa
 **Assessment:** Phase 1 produces a useful first-pass triage and draft layer. It would reduce Vincent's time on a standard redline round, but would require meaningful manual completion before any document could be sent to legal or to TTE. The gaps are real but fixable in Phase 2 without rethinking the underlying architecture. Nothing in the three test cases exposes a Cat 5 problem — the pipeline model is sound for this negotiation type.
 
 The two changes most worth making before first live use are the `round_number` pass-through (Cat 2, small fix) and the `is_signature_blocker` field on `ClauseRecommendation` (Cat 1, small fix with high legal impact).
+
+---
+
+## Post-Phase-A findings (from dry-run harness)
+
+### Finding F — original_text plumbing gap (Layer C wiring decision)
+
+The dry-run harness verified four of the five Phase A fixes propagate end-to-end (signature blocker propagation, accepted_with_addition detection, signature blocker flagging in LRS, counterparty_profile_ref auto-slugging). The fifth — Fix D's restore_strategy="verbatim" path — does not fire in the dry run because original_text is a DiffEntry field (Agent 4's output) but is not carried forward into ClauseRecommendation (Agent 5's output). Agent 6's _draft_one check rec.get("original_text", "") therefore returns empty for signature-blocker clauses with deleted original text (like Clause 6.1 indemnity deletion), causing the strategy to fall through to "redraft" instead of "verbatim".
+
+**Category:** 2 (abstraction mismatch — data flow gap).
+**Layer:** This is a Layer C wiring decision, not a Layer B defect. The architectural seam (restore_strategy auto-selection on is_signature_blocker + original_text presence) is correctly built. The choice of how to thread original_text through the pipeline — either (A) extend ClauseRecommendation schema to include original_text, or (B) have State Manager's _handle_counter_proposals_ready cross-reference the diff JSON to enrich the payload with original_text — depends on real LLM behavior and prompt design.
+
+**Recommended resolution:** Defer until Layer C implementation. When wiring real LLMs to analyze_clause, decide whether the prompt should produce original_text in its output (option A, simpler) or whether SM enrichment should cross-reference diff JSON (option B, lower duplication). Either approach is non-breaking.
+
+**Discovery method:** Dry-run harness smoke test (Phase B). Without the harness, this would not have been caught until Layer C wiring.
