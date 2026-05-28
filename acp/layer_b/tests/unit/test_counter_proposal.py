@@ -554,6 +554,58 @@ class RestoreStrategyTests(unittest.TestCase):
         agent.process_event(TenantContext(tenant_id="alice"), _make_event())
         self.assertEqual(received_strategies, ["redraft"])
 
+    def test_verbatim_strategy_uses_original_text_from_clause_recommendation_field(self):
+        """Finding F resolution: ClauseRecommendation.original_text is serialised into analysis
+        JSON via asdict(). When Agent 6 reads a rec with that field populated and
+        is_signature_blocker=True, restore_strategy='verbatim' is selected and the
+        original_text value is passed to the drafter.
+
+        This test specifically constructs the analysis rec via asdict(ClauseRecommendation(...))
+        to simulate exactly what Agent 5 now produces after the fix.
+        """
+        from dataclasses import asdict as dc_asdict
+        from acp.layer_b.agents.redline_analysis import ClauseRecommendation
+
+        rec = ClauseRecommendation(
+            clause_reference="6.1",
+            recommendation="reject",
+            reasoning="Critical indemnity clause deleted.",
+            playbook_reference=None,
+            confidence="high",
+            requires_legal_review=True,
+            is_signature_blocker=True,
+            original_text="Indemnity shall be mutual and unlimited.",
+        )
+
+        received_strategies: list[str] = []
+        received_original_texts: list[str] = []
+
+        def _capturing_drafter(
+            clause_reference, recommendation, reasoning_from_analysis,
+            original_text, counterparty_text, playbook_context,
+            restore_strategy="redraft",
+        ):
+            received_strategies.append(restore_strategy)
+            received_original_texts.append(original_text)
+            return CounterProposalDraft(
+                clause_reference=clause_reference,
+                based_on_recommendation=recommendation,
+                original_text=original_text,
+                counterparty_text=counterparty_text,
+                counter_text=original_text if restore_strategy == "verbatim" else "counter",
+                reasoning="ok",
+                tone="firm",
+                playbook_reference=None,
+                requires_legal_review=True,
+            )
+
+        storage = MockStorageAdapter()
+        _seed_analysis(storage, [dc_asdict(rec)])
+        agent, _, _ = _make_agent(storage, _capturing_drafter)
+        agent.process_event(TenantContext(tenant_id="alice"), _make_event())
+        self.assertEqual(received_strategies, ["verbatim"])
+        self.assertEqual(received_original_texts, ["Indemnity shall be mutual and unlimited."])
+
 
 class SignatureBlockerPayloadTests(unittest.TestCase):
     """signature_blockers list is included in EVENT_COUNTER_PROPOSALS_READY payload."""

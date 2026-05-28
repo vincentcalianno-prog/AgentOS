@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import json
 import uuid
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, replace
 from datetime import datetime, timezone
 from typing import Callable, Optional
 
@@ -47,6 +47,7 @@ class ClauseRecommendation:
     confidence: str              # "high" | "medium" | "low"
     requires_legal_review: bool
     is_signature_blocker: bool = False  # True if this clause must be resolved before signature
+    original_text: str = ""             # Carried from DiffEntry; enables verbatim restore in Agent 6
 
 
 def _null_analyzer(
@@ -225,6 +226,10 @@ class RedlineAnalyzer:
                 self._playbook_context,
                 round_number,
             )
+            # Always carry original_text forward from the diff entry; the injected
+            # analyzer is not expected to populate it — the diff is the source of truth.
+            if original_text:
+                rec = replace(rec, original_text=original_text)
             self._audit_write(
                 context, negotiation_id,
                 "clause_analysed",
@@ -251,6 +256,7 @@ class RedlineAnalyzer:
                 playbook_reference=None,
                 confidence="low",
                 requires_legal_review=True,
+                original_text=original_text,
             )
 
     def _emit(self, context: TenantContext, event: StateEvent) -> None:

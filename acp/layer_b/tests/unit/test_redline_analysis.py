@@ -558,3 +558,22 @@ class SignatureBlockerTests(unittest.TestCase):
         doc = json.loads(storage.retrieve(_ANALYSIS_PATH).decode())
         rec = doc["recommendations"][0]
         self.assertTrue(rec["is_signature_blocker"])
+
+
+class OriginalTextPropagationTests(unittest.TestCase):
+    """original_text from DiffEntry is propagated into ClauseRecommendation (Finding F fix)."""
+
+    def test_original_text_from_diff_entry_propagated_to_recommendation_json(self):
+        """After the fix: original_text on a diff entry appears in the analysis JSON output.
+
+        Before Finding F was resolved, ClauseRecommendation had no original_text field,
+        so Agent 6's _draft_one always received "" and the verbatim restore path for
+        signature-blocking deleted clauses was silently bypassed.
+        """
+        storage = MockStorageAdapter()
+        _seed_diff(storage, [_deleted_entry("6.1", text="Indemnity shall be mutual and unlimited.")])
+        agent, _, _ = _make_agent(storage, REJECT_ALL)
+        agent.process_event(_alice(), _make_event())
+        doc = json.loads(storage.retrieve(_ANALYSIS_PATH).decode())
+        rec = doc["recommendations"][0]
+        self.assertEqual(rec["original_text"], "Indemnity shall be mutual and unlimited.")
