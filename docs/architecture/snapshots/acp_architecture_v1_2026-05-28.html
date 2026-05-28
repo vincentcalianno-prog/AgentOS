@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>ACP architecture map</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Public+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #F8F4ED;
+    --surface: #FFFFFF;
+    --ink: #1A1A1A;
+    --ink-muted: #5C5C5C;
+    --ink-faint: #888880;
+    --rule: #D8D2C6;
+    --accent: #4A1B0C;
+
+    --c-purple-50: #EEEDFE; --c-purple-600: #534AB7; --c-purple-800: #3C3489;
+    --c-teal-50:   #E1F5EE; --c-teal-600:   #0F6E56; --c-teal-800:   #085041;
+    --c-blue-50:   #E6F1FB; --c-blue-600:   #185FA5; --c-blue-800:   #0C447C;
+    --c-coral-50:  #FAECE7; --c-coral-600:  #993C1D; --c-coral-800:  #712B13;
+    --c-amber-50:  #FAEEDA; --c-amber-600:  #854F0B; --c-amber-800:  #633806;
+    --c-gray-50:   #F1EFE8; --c-gray-600:   #5F5E5A; --c-gray-800:   #444441;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: 'Public Sans', system-ui, sans-serif;
+    font-size: 16px;
+    line-height: 1.7;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .page {
+    max-width: 880px;
+    margin: 0 auto;
+    padding: 80px 40px 120px;
+  }
+
+  header {
+    border-bottom: 1px solid var(--rule);
+    padding-bottom: 32px;
+    margin-bottom: 56px;
+  }
+
+  .eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    margin: 0 0 12px;
+  }
+
+  h1 {
+    font-family: 'Fraunces', serif;
+    font-weight: 500;
+    font-size: 44px;
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+    margin: 0 0 16px;
+  }
+
+  .lede {
+    color: var(--ink-muted);
+    font-size: 18px;
+    max-width: 640px;
+    margin: 0;
+  }
+
+  section {
+    margin-bottom: 72px;
+  }
+
+  h2 {
+    font-family: 'Fraunces', serif;
+    font-weight: 500;
+    font-size: 28px;
+    letter-spacing: -0.01em;
+    margin: 0 0 8px;
+    line-height: 1.2;
+  }
+
+  .section-tag {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    margin: 0 0 32px;
+  }
+
+  .diagram-frame {
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+    padding: 32px;
+    margin: 24px 0 32px;
+  }
+
+  .diagram-frame svg {
+    width: 100%;
+    height: auto;
+    display: block;
+  }
+
+  p {
+    margin: 0 0 18px;
+    color: var(--ink);
+  }
+
+  p.muted {
+    color: var(--ink-muted);
+  }
+
+  strong {
+    font-weight: 600;
+  }
+
+  code {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.88em;
+    background: var(--c-gray-50);
+    padding: 2px 6px;
+    border-radius: 3px;
+    color: var(--ink);
+  }
+
+  .callout {
+    border-left: 2px solid var(--accent);
+    padding: 4px 0 4px 20px;
+    margin: 24px 0;
+    color: var(--ink-muted);
+    font-size: 15px;
+  }
+
+  ul.state-list {
+    list-style: none;
+    padding: 0;
+    margin: 24px 0;
+    border-top: 1px solid var(--rule);
+  }
+
+  ul.state-list li {
+    padding: 16px 0;
+    border-bottom: 1px solid var(--rule);
+    display: grid;
+    grid-template-columns: 90px 1fr;
+    gap: 24px;
+    align-items: baseline;
+  }
+
+  .status {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+  }
+
+  .status.built { color: var(--c-teal-600); }
+  .status.designing { color: var(--c-amber-600); }
+  .status.pending { color: var(--ink-faint); }
+
+  footer {
+    margin-top: 80px;
+    padding-top: 24px;
+    border-top: 1px solid var(--rule);
+    color: var(--ink-faint);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+
+  /* SVG text styling — match document typography */
+  svg text {
+    font-family: 'Public Sans', system-ui, sans-serif;
+  }
+  svg .t-title { font-size: 14px; font-weight: 500; }
+  svg .t-sub   { font-size: 12px; font-weight: 400; }
+  svg .t-body  { font-size: 12px; font-weight: 400; }
+</style>
+</head>
+<body>
+<aside style="max-width: 880px; margin: 24px auto 0; padding: 16px 40px;
+              border: 1px solid var(--rule); border-radius: 4px;
+              background: var(--surface); font-size: 13px;
+              font-family: 'Public Sans', system-ui, sans-serif;
+              color: var(--ink-muted);">
+  <p style="font-family: 'JetBrains Mono', monospace; font-size: 11px;
+            letter-spacing: 0.16em; text-transform: uppercase;
+            color: var(--ink-faint); margin: 0 0 8px;">
+    Snapshot v1 · 2026-05-28
+  </p>
+  <p style="margin: 0;">
+    Initial snapshot. Captures Layer A/B/C architecture, agents 1–9 placement,
+    and the contract type + category taxonomies pre-content. Built state at
+    this snapshot: 409 tests passing on commits b53ce87 (Finding F) and
+    68c640b (env management). Antora Layer C content not yet drafted.
+  </p>
+</aside>
+<main class="page">
+
+<header>
+  <p class="eyebrow">Architecture reference — 28 May 2026</p>
+  <h1>ACP layer map &amp; contract taxonomy</h1>
+  <p class="lede">Where we sit before drafting Antora's Layer C content. Two diagrams: the three-layer architecture with agents placed in their layers, and the two-taxonomy design for contract types and clause categories.</p>
+</header>
+
+<section>
+  <p class="section-tag">Diagram 1 of 2</p>
+  <h2>Layer A / B / C architecture</h2>
+
+  <div class="diagram-frame">
+    <svg viewBox="0 0 680 580" role="img" aria-label="Layer A AgentOS contains Layer B WorkflowOS and Layer C deployment content">
+      <title>ACP layer architecture</title>
+      <desc>Layer A is the umbrella repository. Layer B contains platform DNA agents and workflow cells. Layer C contains Antora-specific playbook, skills, and config.</desc>
+
+      <!-- Layer A outer -->
+      <rect x="20" y="20" width="640" height="540" rx="20"
+            fill="var(--c-purple-50)" stroke="var(--c-purple-600)" stroke-width="0.5"/>
+      <text x="340" y="48" text-anchor="middle" dominant-baseline="central"
+            class="t-title" fill="var(--c-purple-800)">Layer A — AgentOS</text>
+      <text x="340" y="66" text-anchor="middle" dominant-baseline="central"
+            class="t-sub" fill="var(--c-purple-600)">Umbrella repository</text>
+
+      <!-- Layer B substrate -->
+      <rect x="40" y="90" width="360" height="460" rx="12"
+            fill="var(--c-teal-50)" stroke="var(--c-teal-600)" stroke-width="0.5"/>
+      <text x="220" y="114" text-anchor="middle" dominant-baseline="central"
+            class="t-title" fill="var(--c-teal-800)">Layer B — WorkflowOS</text>
+      <text x="220" y="132" text-anchor="middle" dominant-baseline="central"
+            class="t-sub" fill="var(--c-teal-600)">Platform substrate</text>
+
+      <!-- Platform DNA -->
+      <rect x="60" y="160" width="320" height="170" rx="8"
+            fill="var(--c-blue-50)" stroke="var(--c-blue-600)" stroke-width="0.5"/>
+      <text x="220" y="184" text-anchor="middle" dominant-baseline="central"
+            class="t-title" fill="var(--c-blue-800)">Platform DNA</text>
+      <text x="220" y="202" text-anchor="middle" dominant-baseline="central"
+            class="t-sub" fill="var(--c-blue-600)">Workflow-agnostic</text>
+      <text x="80" y="228" class="t-body" fill="var(--c-blue-800)">Agent 3 — State Manager</text>
+      <text x="80" y="248" class="t-body" fill="var(--c-blue-800)">Agent 8 — Workflow Orchestrator</text>
+      <text x="80" y="268" class="t-body" fill="var(--c-blue-800)">Agent 9 — Portfolio Aggregator</text>
+      <text x="80" y="288" class="t-body" fill="var(--c-blue-800)">Adapter interfaces</text>
+      <text x="80" y="308" class="t-body" fill="var(--c-blue-800)">Audit log</text>
+
+      <!-- Workflow cells -->
+      <rect x="60" y="350" width="320" height="190" rx="8"
+            fill="var(--c-coral-50)" stroke="var(--c-coral-600)" stroke-width="0.5"/>
+      <text x="220" y="374" text-anchor="middle" dominant-baseline="central"
+            class="t-title" fill="var(--c-coral-800)">Workflow cells</text>
+      <text x="220" y="392" text-anchor="middle" dominant-baseline="central"
+            class="t-sub" fill="var(--c-coral-600)">contract_redline workflow</text>
+      <text x="80" y="418" class="t-body" fill="var(--c-coral-800)">Agent 1 — Email Watcher</text>
+      <text x="80" y="438" class="t-body" fill="var(--c-coral-800)">Agent 2 — Attachment Extractor</text>
+      <text x="80" y="458" class="t-body" fill="var(--c-coral-800)">Agent 4 — Structural Diff</text>
+      <text x="80" y="478" class="t-body" fill="var(--c-coral-800)">Agent 5 — Clause Analyzer</text>
+      <text x="80" y="498" class="t-body" fill="var(--c-coral-800)">Agent 6 — Counter Proposer</text>
+      <text x="80" y="518" class="t-body" fill="var(--c-coral-800)">Agent 7 — LRS Renderer</text>
+
+      <!-- Layer C deployment -->
+      <rect x="420" y="90" width="220" height="460" rx="12"
+            fill="var(--c-amber-50)" stroke="var(--c-amber-600)" stroke-width="0.5"/>
+      <text x="530" y="114" text-anchor="middle" dominant-baseline="central"
+            class="t-title" fill="var(--c-amber-800)">Layer C — Deployment</text>
+      <text x="530" y="132" text-anchor="middle" dominant-baseline="central"
+            class="t-sub" fill="var(--c-amber-600)">Antora-specific</text>
+
+      <!-- Playbook -->
+      <rect x="440" y="160" width="180" height="100" rx="8"
+            fill="var(--c-gray-50)" stroke="var(--c-gray-600)" stroke-width="0.5"/>
+      <text x="530" y="184" text-anchor="middle" dominant-baseline="central"
+            class="t-title" fill="var(--c-gray-800)">Playbook</text>
+      <text x="530" y="208" text-anchor="middle" dominant-baseline="central"
+            class="t-sub" fill="var(--c-gray-600)">Positions per</text>
+      <text x="530" y="226" text-anchor="middle" dominant-baseline="central"
+            class="t-sub" fill="var(--c-gray-600)">(type, category) pair</text>
+
+      <!-- Skills -->
+      <rect x="440" y="280" width="180" height="100" rx="8"
+            fill="var(--c-gray-50)" stroke="var(--c-gray-600)" stroke-width="0.5"/>
+      <text x="530" y="304" text-anchor="middle" dominant-baseline="central"
+            class="t-title" fill="var(--c-gray-800)">Skills</text>
+      <text x="530" y="328" text-anchor="middle" dominant-baseline="central"
+            class="t-sub" fill="var(--c-gray-600)">Reasoning patterns</text>
+      <text x="530" y="346" text-anchor="middle" dominant-baseline="central"
+            class="t-sub" fill="var(--c-gray-600)">SKILL.md format</text>
+
+      <!-- Deployment config -->
+      <rect x="440" y="400" width="180" height="140" rx="8"
+            fill="var(--c-gray-50)" stroke="var(--c-gray-600)" stroke-width="0.5"/>
+      <text x="530" y="424" text-anchor="middle" dominant-baseline="central"
+            class="t-title" fill="var(--c-gray-800)">Deployment config</text>
+      <text x="530" y="450" text-anchor="middle" dominant-baseline="central"
+            class="t-sub" fill="var(--c-gray-600)">Credentials</text>
+      <text x="530" y="470" text-anchor="middle" dominant-baseline="central"
+            class="t-sub" fill="var(--c-gray-600)">Routing</text>
+      <text x="530" y="490" text-anchor="middle" dominant-baseline="central"
+            class="t-sub" fill="var(--c-gray-600)">SLA thresholds</text>
+      <text x="530" y="510" text-anchor="middle" dominant-baseline="central"
+            class="t-sub" fill="var(--c-gray-600)">Schema extensions</text>
+    </svg>
+  </div>
+
+  <p><strong>Layer A — AgentOS.</strong> The umbrella repository (the one you cloned, the one Claude Code is operating on). It holds Layer B, Layer C, and eventually other sub-projects beyond ACP (the Daily SCM Agent, MEPA Agent, PO Acceptance Agent live or will live here).</p>
+
+  <p><strong>Layer B — WorkflowOS.</strong> The platform substrate. Splits into two functional regions: <em>Platform DNA</em> (workflow-agnostic agents that any workflow uses) and <em>Workflow Cells</em> (the agents specific to one workflow — today, contract_redline). When workflow #2 lands, it adds a new set of cells without touching the DNA. This is the DNA/cells framing you've already committed to.</p>
+
+  <p><strong>Layer C — Deployment.</strong> Antora-specific content that plugs into Layer B at runtime. Three buckets: the <em>playbook</em> (Antora's positions per contract type and category — this is what we're about to draft), <em>skills</em> (LLM-consumable reasoning patterns in SKILL.md format), and <em>deployment config</em> (credentials, routing, SLA thresholds, schema extensions). When a second org deploys ACP, they replace Layer C — Layer A and Layer B stay the same.</p>
+
+  <div class="callout">
+    The placement of agents inside Layer B is deliberate: Agents 3, 8, 9 sit in Platform DNA because they handle state, orchestration, and cross-workflow aggregation — none of that is workflow-specific. Agents 1, 2, 4–7 sit in Workflow Cells because every step they take (classify a redline email, diff a contract, draft a counter-proposal) is contract_redline-specific.
+  </div>
+</section>
+
+<section>
+  <p class="section-tag">Diagram 2 of 2</p>
+  <h2>Contract type &amp; category taxonomies</h2>
+
+  <div class="diagram-frame">
+    <svg viewBox="0 0 680 490" role="img" aria-label="Two taxonomies that join to produce Layer C playbook entries">
+      <title>Contract type and category taxonomies</title>
+      <desc>Contract type taxonomy on the left, category taxonomy on the right. Both are Layer A substrate. They join to produce per-pair Layer C entries in Antora's playbook.</desc>
+
+      <defs>
+        <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </marker>
+      </defs>
+
+      <!-- Contract type taxonomy -->
+      <rect x="40" y="40" width="280" height="240" rx="12"
+            fill="var(--c-teal-50)" stroke="var(--c-teal-600)" stroke-width="0.5"/>
+      <text x="180" y="68" text-anchor="middle" dominant-baseline="central"
+            class="t-title" fill="var(--c-teal-800)">Contract type taxonomy</text>
+      <text x="180" y="86" text-anchor="middle" dominant-baseline="central"
+            class="t-sub" fill="var(--c-teal-600)">Layer A substrate</text>
+      <text x="60" y="120" class="t-body" fill="var(--c-teal-800)">NDA</text>
+      <text x="60" y="140" class="t-body" fill="var(--c-teal-800)">MPA</text>
+      <text x="60" y="160" class="t-body" fill="var(--c-teal-800)">MEPA</text>
+      <text x="60" y="180" class="t-body" fill="var(--c-teal-800)">MSA</text>
+      <text x="60" y="200" class="t-body" fill="var(--c-teal-800)">SOW</text>
+      <text x="60" y="220" class="t-body" fill="var(--c-teal-800)">PO</text>
+      <text x="60" y="250" class="t-sub" fill="var(--c-teal-600)">… extensible to new types</text>
+
+      <!-- Category taxonomy -->
+      <rect x="360" y="40" width="280" height="240" rx="12"
+            fill="var(--c-coral-50)" stroke="var(--c-coral-600)" stroke-width="0.5"/>
+      <text x="500" y="68" text-anchor="middle" dominant-baseline="central"
+            class="t-title" fill="var(--c-coral-800)">Category taxonomy</text>
+      <text x="500" y="86" text-anchor="middle" dominant-baseline="central"
+            class="t-sub" fill="var(--c-coral-600)">Layer A substrate</text>
+      <text x="380" y="120" class="t-body" fill="var(--c-coral-800)">Indemnification</text>
+      <text x="380" y="140" class="t-body" fill="var(--c-coral-800)">Limitation of liability</text>
+      <text x="380" y="160" class="t-body" fill="var(--c-coral-800)">Warranty</text>
+      <text x="380" y="180" class="t-body" fill="var(--c-coral-800)">Termination</text>
+      <text x="380" y="200" class="t-body" fill="var(--c-coral-800)">Payment terms</text>
+      <text x="380" y="220" class="t-body" fill="var(--c-coral-800)">Confidentiality</text>
+      <text x="380" y="250" class="t-sub" fill="var(--c-coral-600)">… 27 total for MPA scope</text>
+
+      <!-- Join arrows down to Layer C entry -->
+      <line x1="180" y1="290" x2="180" y2="312" stroke="var(--ink-muted)" stroke-width="1.5"
+            marker-end="url(#arrow)"/>
+      <line x1="500" y1="290" x2="500" y2="312" stroke="var(--ink-muted)" stroke-width="1.5"
+            marker-end="url(#arrow)"/>
+
+      <!-- Layer C entry example -->
+      <rect x="40" y="320" width="600" height="155" rx="12"
+            fill="var(--c-amber-50)" stroke="var(--c-amber-600)" stroke-width="0.5"/>
+      <text x="340" y="348" text-anchor="middle" dominant-baseline="central"
+            class="t-title" fill="var(--c-amber-800)">Layer C entry — Antora playbook</text>
+      <text x="340" y="366" text-anchor="middle" dominant-baseline="central"
+            class="t-sub" fill="var(--c-amber-600)">One entry per applicable (contract_type, category) pair</text>
+      <text x="60" y="398" class="t-body" fill="var(--c-amber-800)">(MPA, Indemnification) →</text>
+      <text x="80" y="418" class="t-body" fill="var(--c-amber-800)">preferred: 'Mutual, capped at contract value, IP carve-out'</text>
+      <text x="80" y="438" class="t-body" fill="var(--c-amber-800)">fallback: 'Asymmetric if Antora indemnitee, 2× cap'</text>
+      <text x="80" y="458" class="t-body" fill="var(--c-amber-800)">reject: 'Unlimited or one-way against Antora'</text>
+    </svg>
+  </div>
+
+  <p><strong>Two taxonomies, joined by applicability.</strong> The contract type taxonomy and the category taxonomy both live as Layer A substrate — they're portable across deployments. Each deploying org reuses the same taxonomies but fills in their own Layer C entries.</p>
+
+  <p><strong>Many-to-many relationship.</strong> Each contract type has an applicable subset of categories (NDAs don't have warranty; MPAs do). Each category may appear in multiple contract types (confidentiality appears in NDA, MPA, MEPA, MSA, SOW). Antora's playbook fills in a Layer C entry for each <em>applicable</em> pair — not every category × every type.</p>
+
+  <p><strong>Per-pair Layer C entries.</strong> The bottom box shows the structure: each entry has a preferred position, a fallback, and a reject threshold. The same category (e.g. confidentiality) can have different positions in different contract types — confidentiality in an NDA is the entire point of the document; confidentiality in an MPA is one clause among many. The (contract_type, category) pair is the unit, not just the category.</p>
+
+  <div class="callout">
+    Today we build the architecture to accommodate NDA / MPA / MEPA / MSA / SOW / PO and fill Layer C content for MPA/MEPA only. NDA and SOW content gets filled when those workflows become real. No speculative substrate extraction — same principle as the rest of ACP.
+  </div>
+</section>
+
+<section>
+  <p class="section-tag">Current state</p>
+  <h2>Where we sit</h2>
+
+  <ul class="state-list">
+    <li>
+      <span class="status built">Built</span>
+      <span><strong>Layer B — Platform DNA &amp; Workflow Cells.</strong> All seven agents exist as code on <code>feature/acp-phase1-migration</code>. 409 tests passing, discipline check 4/4. Two commits landed today: <code>b53ce87</code> (Finding F resolution) and <code>68c640b</code> (Python environment management).</span>
+    </li>
+    <li>
+      <span class="status built">Built</span>
+      <span><strong>Adapter interfaces.</strong> Defined in Layer B. Real adapter implementations (Drive, Gmail, Slack, Anthropic SDK) come in Phase 2a–2d.</span>
+    </li>
+    <li>
+      <span class="status designing">Designing</span>
+      <span><strong>Contract type taxonomy.</strong> Six initial types (NDA, MPA, MEPA, MSA, SOW, PO). Schema not yet written — that's Step 2b.i.</span>
+    </li>
+    <li>
+      <span class="status designing">Designing</span>
+      <span><strong>Category taxonomy.</strong> 27 categories validated for MPA/MEPA scope. Schema not yet written — that's Step 2b.ii.</span>
+    </li>
+    <li>
+      <span class="status pending">Pending</span>
+      <span><strong>Layer C — Antora playbook.</strong> Empty. About to be drafted for the MPA/MEPA category set in Step 2c.</span>
+    </li>
+    <li>
+      <span class="status pending">Pending</span>
+      <span><strong>Layer C — skills, real adapters, LLM callables.</strong> Phase 2a–2d work. Blocked on Sandelin's answers to IP and confidentiality questions before Phase 2a ships.</span>
+    </li>
+  </ul>
+
+  <p class="muted">Next step: lock the Layer A schema (contract type taxonomy + category taxonomy, the structure not the content), then fill Antora's Layer C content for the MPA/MEPA scope. ~75 minutes of focused conversation. After that we draft the Sandelin email with the playbook as pre-read.</p>
+</section>
+
+<footer>
+  Vincent Calianno · Antora Energy · ACP Phase 2-pre
+</footer>
+
+</main>
+</body>
+</html>
