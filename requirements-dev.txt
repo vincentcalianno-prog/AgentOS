@@ -1,0 +1,6 @@
+# ACP development / test dependencies
+# References runtime deps so a single `pip install -r requirements-dev.txt` gets everything.
+-r requirements.txt
+
+# Test runner
+pytest>=9.0,<10

@@ -1,0 +1,9 @@
+# ACP runtime dependencies
+#
+# As of Phase 1 (Agents 1-6, Layer B only), every import in acp/ resolves to
+# the Python standard library or to internal acp.* packages.  No third-party
+# packages are required at runtime.
+#
+# When Layer C adapters are wired (Phase 2+), real dependencies will appear
+# here — e.g. google-api-python-client, gspread, anthropic, slack-sdk.
+# Add them only when the corresponding import lands in the codebase.
