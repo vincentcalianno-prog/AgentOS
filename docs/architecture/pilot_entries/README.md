@@ -26,6 +26,7 @@ Pilot entries serve three functions:
 | Pilot | (ContractType, Category, SubClause) | Created | Status |
 |-------|-------------------------------------|---------|--------|
 | `mepa_lol_direct_damages.md` | (MEPA, Limitation of Liability, Direct Damages Clarification) | 2026-05-29 | Draft, pending Sandelin review |
+| `mepa_warranty_warranty_period.md` | (MEPA, Warranty, Warranty Period) | 2026-05-29 | Draft, pending Sandelin review |
 
 ## Schema refinements applied 2026-05-29
 
