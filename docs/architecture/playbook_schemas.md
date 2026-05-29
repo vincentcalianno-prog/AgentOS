@@ -1,7 +1,7 @@
 # ACP Playbook Schemas (Step 2b Locked Design)
 
 This document archives the schema decisions locked during Step 2b of the ACP playbook
-architecture session (2026-05-29). It covers 13 schema entities that define the structural
+architecture session (2026-05-29). It covers 14 schema entities that define the structural
 skeleton of the ACP playbook: how contract types relate to one another, how clauses are
 organized and positioned, how overlays tighten those positions for specific counterparties or
 projects, and how runtime concessions are authorized and logged.
@@ -194,9 +194,10 @@ what counter-language patterns to accept, and what patterns to reject as non-sta
 
 The composite id convention (`mepa.indemnification.general_indemnity`) provides human
 readability while remaining stable as a lookup key. This is also the entity where
-`negotiability` and `is_signature_blocker` live — these are per-deployment judgments about
-a specific clause in a specific contract type context, not properties of the clause or contract
-type in isolation.
+`negotiability` lives — a per-deployment judgment about a specific clause in a specific
+contract type context, not a property of the clause or contract type in isolation.
+`negotiability: signature_blocker` is the source of truth for signature-blocker designation;
+there is no separate boolean.
 
 ```yaml
 PlaybookEntry:
@@ -206,7 +207,7 @@ PlaybookEntry:
   sub_clause_id: str
 
   defend_baseline:
-    template_ref:                      # structured, versioned
+    template_ref:                      # semantic version, e.g., "v1.0" — resolved via TemplateRegistry
       document_id: str
       section_id: str
       version: str
@@ -216,15 +217,37 @@ PlaybookEntry:
   reject_thresholds: List[Pattern]     # unacceptable counterparty counter-language patterns
 
   negotiability: enum                  # boilerplate | parametric | negotiable | signature_blocker
-  is_signature_blocker: bool
 
   constraints: Dict[str, value]        # ordered numeric fields only (e.g., min_cap_multiplier)
+
+  pending_items: List[str]             # explicit "needs attention" list
+  examples: List[str]                  # concrete examples illustrating this entry's application
+  related_entries: List[entry_ref]     # informational pointers to related PlaybookEntries
 
   metadata:
     created_date: date
     last_revised: date
     notes: str
+
+  review_status: enum                  # draft | approved | deprecated
+  last_reviewed_by: Optional[str]      # identity of reviewer, e.g., "sandelin.sikes"
+  last_reviewed_date: Optional[date]
 ```
+
+Notes:
+- `negotiability: signature_blocker` is the sole source of truth for signature-blocker
+  designation. The former `is_signature_blocker` boolean was redundant and has been removed
+  (it was always derivable from `negotiability == "signature_blocker"`).
+- `pending_items`, `examples`, and `related_entries` are top-level structured fields
+  alongside `metadata.notes`, not inside it. `pending_items` captures items needing
+  attention (e.g., "awaiting Sandelin review on mutual_clarification_extension pattern").
+  `examples` captures concrete illustrative instances. `related_entries` points to related
+  PlaybookEntries for informational cross-reference; it is distinct from
+  CrossClauseDependency, which is structural and drives cross-clause risk analysis.
+- `review_status` (draft | approved | deprecated), `last_reviewed_by`, and
+  `last_reviewed_date` support content quality tracking. Three values only — in-flight
+  states like "pending_review" are project-management metadata that do not change how the
+  agent uses the entry and therefore do not belong in Layer A substrate.
 
 ---
 
@@ -283,6 +306,10 @@ Overlay:
     created_date: date
     last_revised: date
     notes: str
+
+  review_status: enum                  # draft | approved | deprecated
+  last_reviewed_by: Optional[str]      # identity of reviewer, e.g., "sandelin.sikes"
+  last_reviewed_date: Optional[date]
 ```
 
 Notes:
@@ -293,6 +320,9 @@ Notes:
 - Initial overlay content is deferred to Step 2c authoring. Overlays are authored when
   the first negotiation surfaces the need; speculating about overlays before real
   counterparty patterns emerge is premature.
+- `review_status`, `last_reviewed_by`, `last_reviewed_date`: same three-value review
+  tracking as PlaybookEntry. Overlays are authored by humans and require the same approval
+  discipline before being applied in production.
 
 ---
 
@@ -317,6 +347,10 @@ CrossClauseDependency:
     created_date: date
     last_revised: date
     notes: str
+
+  review_status: enum                  # draft | approved | deprecated
+  last_reviewed_by: Optional[str]      # identity of reviewer, e.g., "sandelin.sikes"
+  last_reviewed_date: Optional[date]
 ```
 
 Notes:
@@ -327,6 +361,9 @@ Notes:
 - Three `interaction_type` values: `mutual_dependency` (both entries must be present or
   absent together), `mutual_exclusion` (accepting one makes the other untenable),
   `requires_consistency` (the two entries must align to avoid a gap like MCM).
+- `review_status`, `last_reviewed_by`, `last_reviewed_date`: same three-value review
+  tracking as PlaybookEntry. Cross-clause dependencies are modeled by humans and benefit
+  from the same approval discipline.
 
 ---
 
@@ -463,6 +500,41 @@ ConcessionPromotion:
 
 ---
 
+## Entity 14: TemplateRegistry
+
+TemplateRegistry provides versioned resolution for `template_ref` fields on PlaybookEntry.
+When a PlaybookEntry references `document_id: antora_mepa_template, version: v1.0`, the
+playbook loader looks up the TemplateRegistry to get the canonical document at that version.
+
+The key design principle is deliberate opt-in: when Antora's legal team updates a template
+(e.g., new standard language for §8.3 in response to a court decision), existing PlaybookEntry
+references at `v1.0` continue pointing to the prior template until each entry is deliberately
+updated to the new version. No silent invalidation. A new template version never automatically
+propagates to playbook entries — entries opt in by updating their `template_ref.version`
+field explicitly.
+
+TemplateRegistry is Layer C content — each deployment has its own set of templates — but the
+schema is Layer A substrate.
+
+```yaml
+TemplateRegistry:
+  id: str                              # e.g., "antora_mepa_template"
+  display_name: str                    # e.g., "Antora MEPA Template"
+  versions: List[TemplateVersion]
+  metadata:
+    created_date: date
+    last_revised: date
+    notes: str
+
+TemplateVersion:
+  version: str                         # semantic version, e.g., "v1.0"
+  effective_date: date
+  document_ref: str                    # pointer to actual document (file path, doc id, URL)
+  notes: Optional[str]                 # what changed in this version
+```
+
+---
+
 ## Open items for Step 2c
 
 The following were deliberately left open at the end of Step 2b. Step 2c does not begin
@@ -496,6 +568,12 @@ until these are resolved or the relevant decisions are deferred to Phase 2.
 
 The following were explicitly considered and put aside during Step 2b. They are recorded here
 so that future-Vincent knows these are not oversights.
+
+Four minor refinements identified during pilot entry validation (2026-05-29) have been applied
+to this document and are no longer listed as deferred: dropping `is_signature_blocker` boolean,
+adding three-value review tracking, establishing `template_ref.version` semantic versioning
+via TemplateRegistry, and adding `pending_items` / `examples` / `related_entries` as
+structured top-level fields on PlaybookEntry.
 
 - **Fourth overlay axis (geography, regulatory tier, value tier).** The axis enum is the
   extension point. Add a fourth value when authoring real overlays reveals that none of the

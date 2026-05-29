@@ -26,7 +26,7 @@ defend_baseline:
   template_ref:
     document_id: antora_mepa_template
     section_id: "8.3"
-    version: current  # TODO: establish version convention (see schema refinement #3)
+    version: v1.0
   guidance: >
     Defend this clause verbatim. It carves out production-related damages
     (production interruption, loss of output, reduced throughput, scrap,
@@ -125,9 +125,17 @@ reject_thresholds:
       Direct contradiction of the clause's intent. Hard reject.
 
 negotiability: signature_blocker
-is_signature_blocker: true  # TODO: redundant with negotiability (see refinement #1)
 
 constraints: {}
+
+pending_items:
+  - "Sandelin review of all three accept_modifications patterns, especially mutual_clarification_extension"
+  - "Sandelin confirmation of negotiability: signature_blocker designation"
+  - "Confirmation that constraints: {} is correct for this clause (no numeric thresholds)"
+examples:
+  - "MCM Engineering (April 2026): attempted to delete this clause in MEPA redlines while accepting mutual consequential exclusion in PO. Cross-document analysis caught the pattern; Antora held the clause firm."
+related_entries:
+  - "mepa.limitation_of_liability.disclaimer_of_certain_damages"
 
 metadata:
   created_date: 2026-05-29
@@ -136,6 +144,10 @@ metadata:
     Pilot entry — first drafted during Step 2c schema validation exercise.
     Sandelin review pending for all fields. The mutual_clarification_extension
     accept pattern should be explicitly Sandelin-validated before deployment.
+
+review_status: draft
+last_reviewed_by: null
+last_reviewed_date: null
 ```
 
 ## CrossClauseDependency (draft)
@@ -172,11 +184,15 @@ metadata:
     Pilot dependency — drafted alongside the Direct Damages Clarification
     pilot entry. References mepa.limitation_of_liability.disclaimer_of_certain_damages
     which has not yet been drafted as its own pilot entry.
+
+review_status: draft
+last_reviewed_by: null
+last_reviewed_date: null
 ```
 
 ## Schema validation findings from this pilot
 
-The 13-entity schema model held up. The four-field Pattern structure was sufficient (didn't reach for match_criteria once). CrossClauseDependency as a separate entity was clearly correct — modeling this on either PlaybookEntry alone would have been awkward. Four minor refinements surfaced (see `docs/architecture/pilot_entries/README.md` for details).
+The 14-entity schema model held up. The four-field Pattern structure was sufficient (didn't reach for match_criteria once). CrossClauseDependency as a separate entity was clearly correct — modeling this on either PlaybookEntry alone would have been awkward. Four minor refinements surfaced during piloting and have been applied: `is_signature_blocker` boolean dropped, three-value review tracking added to PlaybookEntry/Overlay/CrossClauseDependency, `template_ref.version` established as semantic versions resolved via TemplateRegistry (Entity 14), and `pending_items` / `examples` / `related_entries` added as structured top-level fields.
 
 ## Open items for Sandelin review
 

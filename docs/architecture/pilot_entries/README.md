@@ -27,17 +27,14 @@ Pilot entries serve three functions:
 |-------|-------------------------------------|---------|--------|
 | `mepa_lol_direct_damages.md` | (MEPA, Limitation of Liability, Direct Damages Clarification) | 2026-05-29 | Draft, pending Sandelin review |
 
-## Schema refinements queued
+## Schema refinements applied 2026-05-29
 
-Pilot entry creation surfaced four minor schema refinements to address before
-full Step 2c content authoring begins:
+Pilot entry creation surfaced four minor refinements. All four have been applied to
+`docs/architecture/playbook_schemas.md` and to the pilot entry in the same commit:
 
-1. Drop `is_signature_blocker` boolean from PlaybookEntry; let `negotiability`
-   enum be the source of truth.
-2. Add `review_status` field to PlaybookEntry for provisional/draft content
-   that hasn't been Sandelin-validated.
-3. Establish `template_ref.version` convention (or switch to template tags/hashes).
-4. Restructure `metadata.notes` or split it into additional structured fields.
+1. Dropped `is_signature_blocker` boolean; `negotiability: signature_blocker` is the source of truth.
+2. Added three-value review tracking (`review_status` / `last_reviewed_by` / `last_reviewed_date`) to PlaybookEntry, Overlay, and CrossClauseDependency.
+3. Established `template_ref.version` as semantic versions (e.g., `v1.0`) resolved via new TemplateRegistry entity (Entity 14).
+4. Added `pending_items`, `examples`, and `related_entries` as structured top-level fields on PlaybookEntry; `metadata.notes` remains freeform.
 
-These are polish, not redesigns. The 13-entity schema model fundamentally held
-under real content.
+The 14-entity schema model held under real content.
