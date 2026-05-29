@@ -1,0 +1,762 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>ACP architecture map — v2</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Public+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #F8F4ED;
+    --surface: #FFFFFF;
+    --ink: #1A1A1A;
+    --ink-muted: #5C5C5C;
+    --ink-faint: #888880;
+    --rule: #D8D2C6;
+    --accent: #4A1B0C;
+
+    --c-purple-50: #EEEDFE; --c-purple-600: #534AB7; --c-purple-800: #3C3489;
+    --c-teal-50:   #E1F5EE; --c-teal-600:   #0F6E56; --c-teal-800:   #085041;
+    --c-blue-50:   #E6F1FB; --c-blue-600:   #185FA5; --c-blue-800:   #0C447C;
+    --c-coral-50:  #FAECE7; --c-coral-600:  #993C1D; --c-coral-800:  #712B13;
+    --c-amber-50:  #FAEEDA; --c-amber-600:  #854F0B; --c-amber-800:  #633806;
+    --c-gray-50:   #F1EFE8; --c-gray-600:   #5F5E5A; --c-gray-800:   #444441;
+    --c-green-50:  #E8F2E6; --c-green-600:  #2D6E1D; --c-green-800:  #1F4D14;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: 'Public Sans', system-ui, sans-serif;
+    font-size: 16px;
+    line-height: 1.7;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .page {
+    max-width: 880px;
+    margin: 0 auto;
+    padding: 80px 40px 120px;
+  }
+
+  header {
+    border-bottom: 1px solid var(--rule);
+    padding-bottom: 32px;
+    margin-bottom: 56px;
+  }
+
+  .eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    margin: 0 0 12px;
+  }
+
+  h1 {
+    font-family: 'Fraunces', serif;
+    font-weight: 500;
+    font-size: 44px;
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+    margin: 0 0 16px;
+  }
+
+  .lede {
+    color: var(--ink-muted);
+    font-size: 18px;
+    max-width: 640px;
+    margin: 0;
+  }
+
+  section { margin-bottom: 72px; }
+
+  h2 {
+    font-family: 'Fraunces', serif;
+    font-weight: 500;
+    font-size: 28px;
+    letter-spacing: -0.01em;
+    margin: 0 0 8px;
+    line-height: 1.2;
+  }
+
+  h3 {
+    font-family: 'Fraunces', serif;
+    font-weight: 500;
+    font-size: 20px;
+    letter-spacing: -0.005em;
+    margin: 32px 0 8px;
+    line-height: 1.3;
+  }
+
+  .section-tag {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    margin: 0 0 32px;
+  }
+
+  .diagram-frame {
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+    padding: 32px;
+    margin: 24px 0 32px;
+  }
+
+  .diagram-frame svg { width: 100%; height: auto; display: block; }
+
+  p { margin: 0 0 18px; color: var(--ink); }
+  p.muted { color: var(--ink-muted); }
+  strong { font-weight: 600; }
+
+  code {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.88em;
+    background: var(--c-gray-50);
+    padding: 2px 6px;
+    border-radius: 3px;
+    color: var(--ink);
+  }
+
+  .callout {
+    border-left: 2px solid var(--accent);
+    padding: 4px 0 4px 20px;
+    margin: 24px 0;
+    color: var(--ink-muted);
+    font-size: 15px;
+  }
+
+  ul.state-list {
+    list-style: none;
+    padding: 0;
+    margin: 24px 0;
+    border-top: 1px solid var(--rule);
+  }
+
+  ul.state-list li {
+    padding: 16px 0;
+    border-bottom: 1px solid var(--rule);
+    display: grid;
+    grid-template-columns: 110px 1fr;
+    gap: 24px;
+    align-items: baseline;
+  }
+
+  .status {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+  }
+
+  .status.built { color: var(--c-teal-600); }
+  .status.designing { color: var(--c-amber-600); }
+  .status.pending { color: var(--ink-faint); }
+  .status.locked { color: var(--c-green-600); }
+
+  ul.delta-list {
+    list-style: none;
+    padding: 0;
+    margin: 24px 0;
+  }
+
+  ul.delta-list li {
+    padding: 12px 0 12px 24px;
+    border-left: 2px solid var(--c-green-600);
+    margin-bottom: 12px;
+    padding-left: 20px;
+  }
+
+  ul.delta-list li strong {
+    color: var(--c-green-800);
+  }
+
+  footer {
+    margin-top: 80px;
+    padding-top: 24px;
+    border-top: 1px solid var(--rule);
+    color: var(--ink-faint);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+
+  svg text { font-family: 'Public Sans', system-ui, sans-serif; }
+  svg .t-title { font-size: 14px; font-weight: 500; }
+  svg .t-sub   { font-size: 12px; font-weight: 400; }
+  svg .t-body  { font-size: 12px; font-weight: 400; }
+  svg .t-small { font-size: 11px; font-weight: 400; }
+</style>
+</head>
+<body>
+
+<aside style="max-width: 880px; margin: 24px auto 0; padding: 16px 40px;
+              border: 1px solid var(--rule); border-radius: 4px;
+              background: var(--surface); font-size: 13px;
+              font-family: 'Public Sans', system-ui, sans-serif;
+              color: var(--ink-muted);">
+  <p style="font-family: 'JetBrains Mono', monospace; font-size: 11px;
+            letter-spacing: 0.16em; text-transform: uppercase;
+            color: var(--ink-faint); margin: 0 0 8px;">
+    Snapshot v2 · 2026-05-29
+  </p>
+  <p style="margin: 0;">
+    Major schema design milestone. Step 2b complete: 13 schema entities locked
+    for the playbook architecture. Adds taxonomy entity model, three-axis overlay
+    system with most-restrictive-wins resolution, and runtime concession workflow
+    distinct from overlays. Built state at this snapshot: 409 tests passing on
+    commits b53ce87, 68c640b, 338dde1, 3f29225 (the schema archive). Antora Layer C
+    content drafting (Step 2c) is the next phase. See "What changed since v1" below.
+  </p>
+</aside>
+
+<main class="page">
+
+<header>
+  <p class="eyebrow">Architecture reference · v2 · 29 May 2026</p>
+  <h1>ACP layer map &amp; playbook schema model</h1>
+  <p class="lede">Where we sit after Step 2b. Three diagrams: the three-layer
+  architecture (refined from v1), the 13-entity schema model that defines the
+  playbook substrate, and the overlay resolution flow that resolves effective
+  positions at negotiation time.</p>
+</header>
+
+<section>
+  <p class="section-tag">What changed since v1</p>
+  <h2>Delta from snapshot v1 (2026-05-28)</h2>
+
+  <p>v1 captured the layer architecture and a two-taxonomy sketch (ContractType,
+  Category) before any playbook schema design existed. Step 2b expanded the schema
+  model from two top-level taxonomies to a 13-entity system covering taxonomies,
+  positions, overlays, runtime concessions, and resolution provenance. The layer
+  architecture itself is unchanged — agents stay where they were — but Layer A now
+  contains substantially more substrate, and the relationships between entities
+  are formally modeled.</p>
+
+  <ul class="delta-list">
+    <li><strong>Schema model (new in v2)</strong> — 13 entities locked: ContractType,
+    ContractRelationship, Category, SubClause, PlaybookEntry, Pattern, Overlay,
+    CrossClauseDependency, ResolutionResult, RuntimeConcession, AuthorizationEvent,
+    RequiredAuthorization, ConcessionPromotion.</li>
+
+    <li><strong>Contract type taxonomy expanded</strong> — 7 types (added MOU/LOI
+    based on Vincent's negotiation history). 9 initial relationships (PO and SOW
+    operate under MPA, MEPA, and MSA; NDA references all three master types).
+    MOU/LOI is standalone.</li>
+
+    <li><strong>Three-axis overlay system</strong> — counterparty, project,
+    commodity. Hardcoded for now with cheap-extension design. Most-restrictive-wins
+    resolution. Loosening handled separately via RuntimeConcession.</li>
+
+    <li><strong>Concession-vs-overlay distinction</strong> — overlays are static,
+    pre-declared, risk-driven tightening. Concessions are dynamic, runtime,
+    human-authorized loosening. Two distinct mechanisms with separate audit trails.</li>
+
+    <li><strong>Provenance as resolution result</strong> — computed at query time,
+    stored in audit log per ClauseRecommendation. Every effective position is
+    traceable to (baseline + contract_type_override + overlays + resolution_rule).</li>
+
+    <li><strong>DNA/cells extraction rule documented</strong> — workflow #2
+    candidate extractions flagged (Agents 1, 2, 7) but not committed. Extract
+    only on byte-for-byte duplication, not theoretical similarity.</li>
+
+    <li><strong>Commit state advanced</strong> — branch is now at 3f29225
+    (4 commits ahead of yesterday). Schema design archived at
+    docs/architecture/playbook_schemas.md.</li>
+  </ul>
+</section>
+
+<section>
+  <p class="section-tag">Diagram 1 of 3</p>
+  <h2>Layer A / B / C architecture (refined)</h2>
+
+  <div class="diagram-frame">
+    <svg viewBox="0 0 680 620" role="img" aria-label="Layer A AgentOS umbrella contains Layer B WorkflowOS substrate and Layer C deployment content. Layer A also holds the 13-entity schema model.">
+      <title>ACP layer architecture (v2)</title>
+      <desc>Three-layer architecture. Layer A is the umbrella with 13 schema entities. Layer B contains platform DNA and workflow cells. Layer C contains Antora-specific content.</desc>
+
+      <!-- Layer A outer -->
+      <rect x="20" y="20" width="640" height="580" rx="20"
+            fill="var(--c-purple-50)" stroke="var(--c-purple-600)" stroke-width="0.5"/>
+      <text x="340" y="48" text-anchor="middle" dominant-baseline="central"
+            class="t-title" fill="var(--c-purple-800)">Layer A — AgentOS</text>
+      <text x="340" y="66" text-anchor="middle" dominant-baseline="central"
+            class="t-sub" fill="var(--c-purple-600)">Umbrella · substrate · 13 schema entities</text>
+
+      <!-- Layer B substrate -->
+      <rect x="40" y="90" width="360" height="490" rx="12"
+            fill="var(--c-teal-50)" stroke="var(--c-teal-600)" stroke-width="0.5"/>
+      <text x="220" y="114" text-anchor="middle" dominant-baseline="central"
+            class="t-title" fill="var(--c-teal-800)">Layer B — WorkflowOS</text>
+      <text x="220" y="132" text-anchor="middle" dominant-baseline="central"
+            class="t-sub" fill="var(--c-teal-600)">Platform substrate</text>
+
+      <!-- Platform DNA -->
+      <rect x="60" y="160" width="320" height="180" rx="8"
+            fill="var(--c-blue-50)" stroke="var(--c-blue-600)" stroke-width="0.5"/>
+      <text x="220" y="184" text-anchor="middle" dominant-baseline="central"
+            class="t-title" fill="var(--c-blue-800)">Platform DNA</text>
+      <text x="220" y="202" text-anchor="middle" dominant-baseline="central"
+            class="t-sub" fill="var(--c-blue-600)">Workflow-agnostic</text>
+      <text x="80" y="228" class="t-body" fill="var(--c-blue-800)">Agent 3 — State Manager</text>
+      <text x="80" y="248" class="t-body" fill="var(--c-blue-800)">Agent 8 — Workflow Orchestrator</text>
+      <text x="80" y="268" class="t-body" fill="var(--c-blue-800)">Agent 9 — Portfolio Aggregator</text>
+      <text x="80" y="288" class="t-body" fill="var(--c-blue-800)">Adapter interfaces</text>
+      <text x="80" y="308" class="t-body" fill="var(--c-blue-800)">Loaders &amp; resolvers</text>
+      <text x="80" y="328" class="t-body" fill="var(--c-blue-800)">Audit log</text>
+
+      <!-- Workflow cells -->
+      <rect x="60" y="360" width="320" height="200" rx="8"
+            fill="var(--c-coral-50)" stroke="var(--c-coral-600)" stroke-width="0.5"/>
+      <text x="220" y="384" text-anchor="middle" dominant-baseline="central"
+            class="t-title" fill="var(--c-coral-800)">Workflow cells</text>
+      <text x="220" y="402" text-anchor="middle" dominant-baseline="central"
+            class="t-sub" fill="var(--c-coral-600)">contract_redline workflow</text>
+      <text x="80" y="428" class="t-body" fill="var(--c-coral-800)">Agent 1 — Email Watcher</text>
+      <text x="80" y="448" class="t-body" fill="var(--c-coral-800)">Agent 2 — Attachment Extractor</text>
+      <text x="80" y="468" class="t-body" fill="var(--c-coral-800)">Agent 4 — Structural Diff</text>
+      <text x="80" y="488" class="t-body" fill="var(--c-coral-800)">Agent 5 — Clause Analyzer</text>
+      <text x="80" y="508" class="t-body" fill="var(--c-coral-800)">Agent 6 — Counter Proposer</text>
+      <text x="80" y="528" class="t-body" fill="var(--c-coral-800)">Agent 7 — LRS Renderer</text>
+
+      <!-- Layer C deployment -->
+      <rect x="420" y="90" width="220" height="490" rx="12"
+            fill="var(--c-amber-50)" stroke="var(--c-amber-600)" stroke-width="0.5"/>
+      <text x="530" y="114" text-anchor="middle" dominant-baseline="central"
+            class="t-title" fill="var(--c-amber-800)">Layer C — Deployment</text>
+      <text x="530" y="132" text-anchor="middle" dominant-baseline="central"
+            class="t-sub" fill="var(--c-amber-600)">Antora-specific</text>
+
+      <!-- Playbook content -->
+      <rect x="440" y="160" width="180" height="110" rx="8"
+            fill="var(--c-gray-50)" stroke="var(--c-gray-600)" stroke-width="0.5"/>
+      <text x="530" y="184" text-anchor="middle" dominant-baseline="central"
+            class="t-title" fill="var(--c-gray-800)">Playbook content</text>
+      <text x="530" y="208" text-anchor="middle" dominant-baseline="central"
+            class="t-sub" fill="var(--c-gray-600)">PlaybookEntry instances</text>
+      <text x="530" y="226" text-anchor="middle" dominant-baseline="central"
+            class="t-sub" fill="var(--c-gray-600)">Overlay instances</text>
+      <text x="530" y="244" text-anchor="middle" dominant-baseline="central"
+            class="t-sub" fill="var(--c-gray-600)">CrossClauseDependency</text>
+
+      <!-- Skills -->
+      <rect x="440" y="290" width="180" height="80" rx="8"
+            fill="var(--c-gray-50)" stroke="var(--c-gray-600)" stroke-width="0.5"/>
+      <text x="530" y="312" text-anchor="middle" dominant-baseline="central"
+            class="t-title" fill="var(--c-gray-800)">Skills</text>
+      <text x="530" y="336" text-anchor="middle" dominant-baseline="central"
+            class="t-sub" fill="var(--c-gray-600)">SKILL.md format</text>
+      <text x="530" y="354" text-anchor="middle" dominant-baseline="central"
+            class="t-sub" fill="var(--c-gray-600)">Reasoning patterns</text>
+
+      <!-- Deployment config -->
+      <rect x="440" y="390" width="180" height="80" rx="8"
+            fill="var(--c-gray-50)" stroke="var(--c-gray-600)" stroke-width="0.5"/>
+      <text x="530" y="412" text-anchor="middle" dominant-baseline="central"
+            class="t-title" fill="var(--c-gray-800)">Deployment config</text>
+      <text x="530" y="436" text-anchor="middle" dominant-baseline="central"
+            class="t-sub" fill="var(--c-gray-600)">Credentials, routing</text>
+      <text x="530" y="454" text-anchor="middle" dominant-baseline="central"
+            class="t-sub" fill="var(--c-gray-600)">SLA, schema extensions</text>
+
+      <!-- Runtime state -->
+      <rect x="440" y="490" width="180" height="80" rx="8"
+            fill="var(--c-gray-50)" stroke="var(--c-gray-600)" stroke-width="0.5"/>
+      <text x="530" y="512" text-anchor="middle" dominant-baseline="central"
+            class="t-title" fill="var(--c-gray-800)">Runtime state</text>
+      <text x="530" y="536" text-anchor="middle" dominant-baseline="central"
+            class="t-sub" fill="var(--c-gray-600)">Negotiations, audit log</text>
+      <text x="530" y="554" text-anchor="middle" dominant-baseline="central"
+            class="t-sub" fill="var(--c-gray-600)">ConcessionLog, promotions</text>
+    </svg>
+  </div>
+
+  <p>The layer structure is unchanged from v1 — Layer A is the umbrella, Layer B
+  is the workflow substrate split into Platform DNA and Workflow Cells, Layer C
+  is Antora-specific deployment content. What's evolved is the substance of each
+  layer.</p>
+
+  <p><strong>Layer A — AgentOS.</strong> Now holds 13 schema entities defining how
+  contract types relate, how clauses are organized, how positions are expressed,
+  how overlays modify positions, how runtime concessions are authorized, and how
+  resolution provenance is tracked. See Diagram 2 for the entity model.</p>
+
+  <p><strong>Layer B — WorkflowOS.</strong> Added "Loaders &amp; resolvers" to the
+  Platform DNA region. These are the workflow-agnostic mechanisms that read Layer C
+  content, validate it against Layer A schemas, and resolve effective positions at
+  query time. The agents themselves are unchanged from v1.</p>
+
+  <p><strong>Layer C — Deployment.</strong> Now shows four buckets: playbook
+  content (the instances Antora authors), skills (LLM reasoning patterns),
+  deployment config (credentials, routing, SLA), and runtime state (negotiations
+  in flight, audit log, concession log). The playbook content bucket is where
+  Step 2c authoring will happen.</p>
+</section>
+
+<section>
+  <p class="section-tag">Diagram 2 of 3</p>
+  <h2>13-entity schema model</h2>
+
+  <div class="diagram-frame">
+    <svg viewBox="0 0 680 700" role="img" aria-label="The 13 schema entities organized into three clusters: taxonomy, position, and runtime.">
+      <title>ACP playbook schema model</title>
+      <desc>13 schema entities grouped into taxonomy (4 entities), position (5 entities), and runtime (4 entities) clusters.</desc>
+
+      <defs>
+        <marker id="arr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </marker>
+      </defs>
+
+      <!-- Cluster 1: Taxonomy -->
+      <rect x="20" y="20" width="640" height="200" rx="12"
+            fill="var(--c-teal-50)" stroke="var(--c-teal-600)" stroke-width="0.5"/>
+      <text x="340" y="48" text-anchor="middle" dominant-baseline="central"
+            class="t-title" fill="var(--c-teal-800)">Taxonomy entities (4)</text>
+      <text x="340" y="66" text-anchor="middle" dominant-baseline="central"
+            class="t-sub" fill="var(--c-teal-600)">Define what kinds of things exist</text>
+
+      <rect x="40" y="90" width="140" height="110" rx="6" fill="#FFFFFF" stroke="var(--c-teal-600)" stroke-width="0.5"/>
+      <text x="110" y="112" text-anchor="middle" class="t-title" fill="var(--c-teal-800)">ContractType</text>
+      <text x="50" y="138" class="t-small" fill="var(--c-teal-800)">id, name</text>
+      <text x="50" y="156" class="t-small" fill="var(--c-teal-800)">applicable_categories</text>
+      <text x="50" y="174" class="t-small" fill="var(--c-teal-800)">required_sections</text>
+      <text x="50" y="192" class="t-small" fill="var(--c-teal-800)">applicable_overlay_axes</text>
+
+      <rect x="200" y="90" width="140" height="110" rx="6" fill="#FFFFFF" stroke="var(--c-teal-600)" stroke-width="0.5"/>
+      <text x="270" y="112" text-anchor="middle" class="t-title" fill="var(--c-teal-800)">ContractRelationship</text>
+      <text x="210" y="138" class="t-small" fill="var(--c-teal-800)">parent_type, child_type</text>
+      <text x="210" y="156" class="t-small" fill="var(--c-teal-800)">relationship_type</text>
+      <text x="210" y="174" class="t-small" fill="var(--c-teal-800)">cardinality</text>
+      <text x="210" y="192" class="t-small" fill="var(--c-teal-800)">9 initial instances</text>
+
+      <rect x="360" y="90" width="140" height="110" rx="6" fill="#FFFFFF" stroke="var(--c-teal-600)" stroke-width="0.5"/>
+      <text x="430" y="112" text-anchor="middle" class="t-title" fill="var(--c-teal-800)">Category</text>
+      <text x="370" y="138" class="t-small" fill="var(--c-teal-800)">id, name, description</text>
+      <text x="370" y="156" class="t-small" fill="var(--c-teal-800)">sub_clauses: List[SubClause]</text>
+      <text x="370" y="174" class="t-small" fill="var(--c-teal-800)">hierarchical container</text>
+
+      <rect x="520" y="90" width="140" height="110" rx="6" fill="#FFFFFF" stroke="var(--c-teal-600)" stroke-width="0.5"/>
+      <text x="590" y="112" text-anchor="middle" class="t-title" fill="var(--c-teal-800)">SubClause</text>
+      <text x="530" y="138" class="t-small" fill="var(--c-teal-800)">id, name, description</text>
+      <text x="530" y="156" class="t-small" fill="var(--c-teal-800)">parent_category</text>
+      <text x="530" y="174" class="t-small" fill="var(--c-teal-800)">applicable_contract_types</text>
+      <text x="530" y="192" class="t-small" fill="var(--c-teal-800)">sub_sub_clauses optional</text>
+
+      <!-- Cluster 2: Position -->
+      <rect x="20" y="240" width="640" height="220" rx="12"
+            fill="var(--c-coral-50)" stroke="var(--c-coral-600)" stroke-width="0.5"/>
+      <text x="340" y="268" text-anchor="middle" dominant-baseline="central"
+            class="t-title" fill="var(--c-coral-800)">Position entities (5)</text>
+      <text x="340" y="286" text-anchor="middle" dominant-baseline="central"
+            class="t-sub" fill="var(--c-coral-600)">Define Antora's judgment per clause</text>
+
+      <rect x="40" y="310" width="140" height="130" rx="6" fill="#FFFFFF" stroke="var(--c-coral-600)" stroke-width="0.5"/>
+      <text x="110" y="332" text-anchor="middle" class="t-title" fill="var(--c-coral-800)">PlaybookEntry</text>
+      <text x="50" y="358" class="t-small" fill="var(--c-coral-800)">(contract_type,</text>
+      <text x="50" y="374" class="t-small" fill="var(--c-coral-800)">category, sub_clause)</text>
+      <text x="50" y="394" class="t-small" fill="var(--c-coral-800)">defend_baseline</text>
+      <text x="50" y="412" class="t-small" fill="var(--c-coral-800)">accept_modifications</text>
+      <text x="50" y="430" class="t-small" fill="var(--c-coral-800)">reject_thresholds</text>
+
+      <rect x="200" y="310" width="140" height="130" rx="6" fill="#FFFFFF" stroke="var(--c-coral-600)" stroke-width="0.5"/>
+      <text x="270" y="332" text-anchor="middle" class="t-title" fill="var(--c-coral-800)">Pattern</text>
+      <text x="210" y="358" class="t-small" fill="var(--c-coral-800)">id, description</text>
+      <text x="210" y="376" class="t-small" fill="var(--c-coral-800)">example_language</text>
+      <text x="210" y="394" class="t-small" fill="var(--c-coral-800)">rationale</text>
+      <text x="210" y="414" class="t-small" fill="var(--c-coral-800)">used in accept_/reject_</text>
+
+      <rect x="360" y="310" width="140" height="130" rx="6" fill="#FFFFFF" stroke="var(--c-coral-600)" stroke-width="0.5"/>
+      <text x="430" y="332" text-anchor="middle" class="t-title" fill="var(--c-coral-800)">Overlay</text>
+      <text x="370" y="358" class="t-small" fill="var(--c-coral-800)">axis, scope_value</text>
+      <text x="370" y="376" class="t-small" fill="var(--c-coral-800)">applies_to entries</text>
+      <text x="370" y="394" class="t-small" fill="var(--c-coral-800)">modifications</text>
+      <text x="370" y="412" class="t-small" fill="var(--c-coral-800)">tightening only</text>
+      <text x="370" y="430" class="t-small" fill="var(--c-coral-800)">most-restrictive-wins</text>
+
+      <rect x="520" y="310" width="140" height="130" rx="6" fill="#FFFFFF" stroke="var(--c-coral-600)" stroke-width="0.5"/>
+      <text x="590" y="332" text-anchor="middle" class="t-title" fill="var(--c-coral-800)">CrossClause</text>
+      <text x="590" y="348" text-anchor="middle" class="t-title" fill="var(--c-coral-800)">Dependency</text>
+      <text x="530" y="374" class="t-small" fill="var(--c-coral-800)">involved_entries</text>
+      <text x="530" y="392" class="t-small" fill="var(--c-coral-800)">interaction_type</text>
+      <text x="530" y="410" class="t-small" fill="var(--c-coral-800)">risk_if_violated</text>
+      <text x="530" y="428" class="t-small" fill="var(--c-coral-800)">MCM finding example</text>
+
+      <!-- Cluster 3: Runtime -->
+      <rect x="20" y="480" width="640" height="200" rx="12"
+            fill="var(--c-amber-50)" stroke="var(--c-amber-600)" stroke-width="0.5"/>
+      <text x="340" y="508" text-anchor="middle" dominant-baseline="central"
+            class="t-title" fill="var(--c-amber-800)">Runtime entities (4)</text>
+      <text x="340" y="526" text-anchor="middle" dominant-baseline="central"
+            class="t-sub" fill="var(--c-amber-600)">Capture what happens during negotiation</text>
+
+      <rect x="40" y="550" width="140" height="120" rx="6" fill="#FFFFFF" stroke="var(--c-amber-600)" stroke-width="0.5"/>
+      <text x="110" y="572" text-anchor="middle" class="t-title" fill="var(--c-amber-800)">ResolutionResult</text>
+      <text x="50" y="598" class="t-small" fill="var(--c-amber-800)">query, context</text>
+      <text x="50" y="616" class="t-small" fill="var(--c-amber-800)">effective_entry</text>
+      <text x="50" y="634" class="t-small" fill="var(--c-amber-800)">provenance trace</text>
+      <text x="50" y="652" class="t-small" fill="var(--c-amber-800)">computed at query time</text>
+
+      <rect x="200" y="550" width="140" height="120" rx="6" fill="#FFFFFF" stroke="var(--c-amber-600)" stroke-width="0.5"/>
+      <text x="270" y="572" text-anchor="middle" class="t-title" fill="var(--c-amber-800)">RuntimeConcession</text>
+      <text x="210" y="598" class="t-small" fill="var(--c-amber-800)">negotiation_id</text>
+      <text x="210" y="616" class="t-small" fill="var(--c-amber-800)">supplier_counter</text>
+      <text x="210" y="634" class="t-small" fill="var(--c-amber-800)">authorizations</text>
+      <text x="210" y="652" class="t-small" fill="var(--c-amber-800)">scope: this_negotiation</text>
+
+      <rect x="360" y="550" width="140" height="120" rx="6" fill="#FFFFFF" stroke="var(--c-amber-600)" stroke-width="0.5"/>
+      <text x="430" y="572" text-anchor="middle" class="t-title" fill="var(--c-amber-800)">Authorization</text>
+      <text x="430" y="588" text-anchor="middle" class="t-title" fill="var(--c-amber-800)">Event</text>
+      <text x="370" y="612" class="t-small" fill="var(--c-amber-800)">identity, role</text>
+      <text x="370" y="630" class="t-small" fill="var(--c-amber-800)">action, timestamp</text>
+      <text x="370" y="648" class="t-small" fill="var(--c-amber-800)">RequiredAuthorization</text>
+      <text x="370" y="664" class="t-small" fill="var(--c-amber-800)">policy enforced</text>
+
+      <rect x="520" y="550" width="140" height="120" rx="6" fill="#FFFFFF" stroke="var(--c-amber-600)" stroke-width="0.5"/>
+      <text x="590" y="572" text-anchor="middle" class="t-title" fill="var(--c-amber-800)">Concession</text>
+      <text x="590" y="588" text-anchor="middle" class="t-title" fill="var(--c-amber-800)">Promotion</text>
+      <text x="530" y="612" class="t-small" fill="var(--c-amber-800)">promoted_concessions</text>
+      <text x="530" y="630" class="t-small" fill="var(--c-amber-800)">resulting_overlay_id</text>
+      <text x="530" y="648" class="t-small" fill="var(--c-amber-800)">deliberate human act</text>
+      <text x="530" y="666" class="t-small" fill="var(--c-amber-800)">surfaced by Agent 9</text>
+    </svg>
+  </div>
+
+  <p>The schema model organizes into three clusters, each playing a different role
+  in the system.</p>
+
+  <h3>Taxonomy entities (teal)</h3>
+  <p>Define what kinds of things exist — the vocabulary of the domain. ContractType
+  enumerates the contract types (NDA, MPA, MEPA, MSA, SOW, PO, MOU/LOI).
+  ContractRelationship captures parent/child relationships between types (PO and
+  SOW operate under master agreements; NDA references master agreements).
+  Category and SubClause define the hierarchical organization of clauses within
+  contracts. These four entities are pure substrate — every deployer uses the
+  same taxonomy entity types, populated with their own instances.</p>
+
+  <h3>Position entities (coral)</h3>
+  <p>Define the actual judgment about what's defensible, acceptable, and unacceptable.
+  PlaybookEntry is the per-(ContractType, Category, SubClause) entry holding
+  defend_baseline, accept_modifications, and reject_thresholds. Pattern is the
+  reusable unit inside accept and reject lists. Overlay applies context-specific
+  tightening based on counterparty, project, or commodity. CrossClauseDependency
+  captures inter-clause risks like the MCM finding (consequential damages +
+  direct damages clarification interaction). These five entities hold the
+  substance of the playbook.</p>
+
+  <h3>Runtime entities (amber)</h3>
+  <p>Capture what happens during negotiation. ResolutionResult is the computed
+  effective position for a specific query, including the provenance trace.
+  RuntimeConcession captures human-authorized loosening — Antora accepting a
+  supplier counter that's less favorable than the resolved position.
+  AuthorizationEvent records who approved the concession with what role and when,
+  governed by RequiredAuthorization policy. ConcessionPromotion captures the
+  deliberate human act of promoting repeated concessions into a permanent Overlay.
+  These four entities make the agent's reasoning auditable.</p>
+
+  <div class="callout">
+    All 13 entities are Layer A substrate — their schemas are universal and port
+    across deployments. The instances of each entity are Layer C content —
+    Antora's specific contract types, categories, playbook entries, overlays, and
+    runtime data. Schema in Layer A; content in Layer C.
+  </div>
+</section>
+
+<section>
+  <p class="section-tag">Diagram 3 of 3</p>
+  <h2>Overlay resolution flow</h2>
+
+  <div class="diagram-frame">
+    <svg viewBox="0 0 680 520" role="img" aria-label="Resolution flow showing baseline plus three overlays plus most-restrictive-wins producing effective position with provenance.">
+      <title>Overlay resolution flow</title>
+      <desc>Resolution engine combines baseline PlaybookEntry with applicable overlays from counterparty, project, and commodity axes, applies most-restrictive-wins, produces effective position with provenance trace.</desc>
+
+      <defs>
+        <marker id="arr2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M2 1L9 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </marker>
+      </defs>
+
+      <!-- Query at top -->
+      <rect x="220" y="30" width="240" height="60" rx="8"
+            fill="var(--c-purple-50)" stroke="var(--c-purple-600)" stroke-width="0.5"/>
+      <text x="340" y="54" text-anchor="middle" dominant-baseline="central"
+            class="t-title" fill="var(--c-purple-800)">Query</text>
+      <text x="340" y="74" text-anchor="middle" dominant-baseline="central"
+            class="t-small" fill="var(--c-purple-600)">(contract_type, category, sub_clause, context)</text>
+
+      <!-- Four input sources -->
+      <rect x="20" y="130" width="140" height="100" rx="6" fill="var(--c-blue-50)" stroke="var(--c-blue-600)" stroke-width="0.5"/>
+      <text x="90" y="152" text-anchor="middle" class="t-title" fill="var(--c-blue-800)">Baseline</text>
+      <text x="90" y="172" text-anchor="middle" class="t-small" fill="var(--c-blue-600)">PlaybookEntry</text>
+      <text x="90" y="195" text-anchor="middle" class="t-small" fill="var(--c-blue-800)">defend_baseline</text>
+      <text x="90" y="211" text-anchor="middle" class="t-small" fill="var(--c-blue-800)">accept / reject patterns</text>
+
+      <rect x="180" y="130" width="140" height="100" rx="6" fill="var(--c-coral-50)" stroke="var(--c-coral-600)" stroke-width="0.5"/>
+      <text x="250" y="152" text-anchor="middle" class="t-title" fill="var(--c-coral-800)">Counterparty</text>
+      <text x="250" y="168" text-anchor="middle" class="t-title" fill="var(--c-coral-800)">Overlay</text>
+      <text x="250" y="190" text-anchor="middle" class="t-small" fill="var(--c-coral-600)">e.g., MCM</text>
+      <text x="250" y="208" text-anchor="middle" class="t-small" fill="var(--c-coral-800)">add tighter rejects</text>
+
+      <rect x="340" y="130" width="140" height="100" rx="6" fill="var(--c-coral-50)" stroke="var(--c-coral-600)" stroke-width="0.5"/>
+      <text x="410" y="152" text-anchor="middle" class="t-title" fill="var(--c-coral-800)">Project Overlay</text>
+      <text x="410" y="174" text-anchor="middle" class="t-small" fill="var(--c-coral-600)">e.g., Pratt</text>
+      <text x="410" y="194" text-anchor="middle" class="t-small" fill="var(--c-coral-800)">grid-critical</text>
+      <text x="410" y="212" text-anchor="middle" class="t-small" fill="var(--c-coral-800)">constraints</text>
+
+      <rect x="500" y="130" width="140" height="100" rx="6" fill="var(--c-coral-50)" stroke="var(--c-coral-600)" stroke-width="0.5"/>
+      <text x="570" y="152" text-anchor="middle" class="t-title" fill="var(--c-coral-800)">Commodity</text>
+      <text x="570" y="168" text-anchor="middle" class="t-title" fill="var(--c-coral-800)">Overlay</text>
+      <text x="570" y="190" text-anchor="middle" class="t-small" fill="var(--c-coral-600)">e.g., PDC</text>
+      <text x="570" y="208" text-anchor="middle" class="t-small" fill="var(--c-coral-800)">equipment-specific</text>
+
+      <!-- Arrows from query to all four -->
+      <line x1="280" y1="90" x2="90" y2="130" stroke="var(--ink-muted)" stroke-width="1.5" marker-end="url(#arr2)"/>
+      <line x1="310" y1="90" x2="250" y2="130" stroke="var(--ink-muted)" stroke-width="1.5" marker-end="url(#arr2)"/>
+      <line x1="370" y1="90" x2="410" y2="130" stroke="var(--ink-muted)" stroke-width="1.5" marker-end="url(#arr2)"/>
+      <line x1="400" y1="90" x2="570" y2="130" stroke="var(--ink-muted)" stroke-width="1.5" marker-end="url(#arr2)"/>
+
+      <!-- Resolver in middle -->
+      <rect x="180" y="280" width="320" height="80" rx="8"
+            fill="var(--c-green-50)" stroke="var(--c-green-600)" stroke-width="0.5"/>
+      <text x="340" y="304" text-anchor="middle" dominant-baseline="central"
+            class="t-title" fill="var(--c-green-800)">Resolver (Layer B)</text>
+      <text x="340" y="324" text-anchor="middle" dominant-baseline="central"
+            class="t-sub" fill="var(--c-green-600)">most-restrictive-wins</text>
+      <text x="340" y="344" text-anchor="middle" dominant-baseline="central"
+            class="t-small" fill="var(--c-green-800)">unions reject_thresholds · tightens constraints · tracks provenance</text>
+
+      <!-- Arrows from inputs to resolver -->
+      <line x1="90" y1="230" x2="220" y2="280" stroke="var(--ink-muted)" stroke-width="1.5" marker-end="url(#arr2)"/>
+      <line x1="250" y1="230" x2="290" y2="280" stroke="var(--ink-muted)" stroke-width="1.5" marker-end="url(#arr2)"/>
+      <line x1="410" y1="230" x2="390" y2="280" stroke="var(--ink-muted)" stroke-width="1.5" marker-end="url(#arr2)"/>
+      <line x1="570" y1="230" x2="460" y2="280" stroke="var(--ink-muted)" stroke-width="1.5" marker-end="url(#arr2)"/>
+
+      <!-- Output -->
+      <rect x="120" y="400" width="440" height="90" rx="8"
+            fill="var(--c-amber-50)" stroke="var(--c-amber-600)" stroke-width="0.5"/>
+      <text x="340" y="424" text-anchor="middle" dominant-baseline="central"
+            class="t-title" fill="var(--c-amber-800)">ResolutionResult</text>
+      <text x="340" y="446" text-anchor="middle" dominant-baseline="central"
+            class="t-small" fill="var(--c-amber-800)">effective_entry: merged PlaybookEntry</text>
+      <text x="340" y="464" text-anchor="middle" dominant-baseline="central"
+            class="t-small" fill="var(--c-amber-800)">provenance: [baseline → mcm_overlay → pratt_overlay → resolution_rule]</text>
+      <text x="340" y="482" text-anchor="middle" dominant-baseline="central"
+            class="t-small" fill="var(--c-amber-600)">stored in audit log per ClauseRecommendation</text>
+
+      <!-- Arrow from resolver to output -->
+      <line x1="340" y1="360" x2="340" y2="400" stroke="var(--ink-muted)" stroke-width="1.5" marker-end="url(#arr2)"/>
+    </svg>
+  </div>
+
+  <p>The resolver lives in Layer B (as part of the loaders subsystem). When any
+  agent — typically Agent 5 (Clause Analyzer) or Agent 6 (Counter Proposer) —
+  needs Antora's effective position on a specific clause in a specific negotiation
+  context, it queries the resolver.</p>
+
+  <p>The resolver looks up the baseline PlaybookEntry for the
+  (ContractType, Category, SubClause) triple, finds applicable overlays based on
+  the negotiation context (which counterparty, which project, which commodity),
+  and applies them using most-restrictive-wins semantics. For list fields (accept
+  modifications, reject thresholds), this means unioning all add_to operations
+  and applying remove_from operations. For numeric constraints (cap multipliers,
+  warranty months), most-restrictive means selecting the maximum value across all
+  applicable overlays.</p>
+
+  <p>The result is wrapped in a ResolutionResult that includes both the effective
+  entry and a provenance trace listing each source that contributed. When Agent 5
+  produces a ClauseRecommendation based on the resolved position, the audit log
+  stores the full provenance — which makes every recommendation traceable back to
+  baseline + overlays + resolution rule.</p>
+
+  <div class="callout">
+    Loosening is intentionally not handled by overlays. If a supplier counter is
+    less restrictive than the resolved position but Antora's team wants to accept
+    it, that's a RuntimeConcession — a separate runtime mechanism with multi-party
+    human authorization. Concessions are scoped to a single negotiation and never
+    auto-promote into permanent overlays. Promotion to overlay is a deliberate,
+    reviewed, human act captured as ConcessionPromotion.
+  </div>
+</section>
+
+<section>
+  <p class="section-tag">Current state</p>
+  <h2>Where we sit</h2>
+
+  <ul class="state-list">
+    <li>
+      <span class="status built">Built</span>
+      <span><strong>Layer B agents.</strong> All seven agents (1, 2, 3, 4, 5, 6, 7) plus
+      8 and 9 exist as code on <code>feature/acp-phase1-migration</code>. 409 tests
+      passing on commit <code>b53ce87</code> (Finding F) extended through
+      <code>3f29225</code> (schema archive).</span>
+    </li>
+    <li>
+      <span class="status built">Built</span>
+      <span><strong>Substrate readiness.</strong> Python environment management landed in
+      <code>68c640b</code>. Anyone cloning AgentOS can run <code>make setup &amp;&amp; make check</code>
+      to verify locally. Discipline check 4/4 clean.</span>
+    </li>
+    <li>
+      <span class="status built">Built</span>
+      <span><strong>Architecture documentation.</strong> v1 snapshot at <code>338dde1</code>,
+      v2 snapshot (this document) about to commit. Schema archive at
+      <code>3f29225</code> documenting all 13 entities in markdown reference form.</span>
+    </li>
+    <li>
+      <span class="status locked">Locked</span>
+      <span><strong>Layer A schema design.</strong> 13 entities designed and archived
+      via Step 2b sessions 2b.i through 2b.iv. Design decisions captured in
+      <code>docs/architecture/playbook_schemas.md</code>.</span>
+    </li>
+    <li>
+      <span class="status pending">Pending</span>
+      <span><strong>Layer C Antora content.</strong> Step 2c is the next phase. Empty.
+      Will be authored from MPA and MEPA templates as ground truth. Some entries
+      require Sandelin input (signature_blocker designations, always-require-legal-review
+      categories, IP/confidentiality on prompts).</span>
+    </li>
+    <li>
+      <span class="status pending">Pending</span>
+      <span><strong>Layer B loaders &amp; resolver.</strong> playbook_loader,
+      skill_loader, prompt_registry, and the overlay resolution engine. Phase 2a
+      work, blocked on Sandelin's answers to IP and confidentiality questions before
+      shipping.</span>
+    </li>
+    <li>
+      <span class="status pending">Pending</span>
+      <span><strong>Layer B real adapters.</strong> Drive, Gmail, Slack, Anthropic SDK
+      implementations. Phase 2a–2d work.</span>
+    </li>
+    <li>
+      <span class="status pending">Pending</span>
+      <span><strong>Workflow #2 evaluation.</strong> DNA/cells extraction candidates
+      (Agents 1, 2, 7) await byte-for-byte duplication evidence from workflow #2
+      before extracting to platform. Do not extract speculatively.</span>
+    </li>
+  </ul>
+
+  <p class="muted">Next session: Step 2c — Antora playbook content authoring. Different
+  mode of work than schema design. Templates are the source of truth; the locked
+  schemas in <code>playbook_schemas.md</code> define the slots; Sandelin meeting will
+  fill the open content questions.</p>
+</section>
+
+<footer>
+  Vincent Calianno · Antora Energy · ACP Phase 2-pre · snapshot v2
+</footer>
+
+</main>
+</body>
+</html>

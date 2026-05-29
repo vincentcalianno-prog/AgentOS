@@ -12,6 +12,7 @@ over time. Each snapshot is an HTML file that opens in a browser and shows:
 | Version | Date | Trigger | File |
 |---------|------|---------|------|
 | v1 | 2026-05-28 | Initial snapshot before Antora Layer C content drafted | `acp_architecture_v1_2026-05-28.html` |
+| v2 | 2026-05-29 | Step 2b schema design locked; 13 entities documented; overlay system formalized | `acp_architecture_v2_2026-05-29.html` |
 
 ## When to create a new snapshot
 
