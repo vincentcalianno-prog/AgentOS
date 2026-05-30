@@ -169,6 +169,7 @@ pending_items:
   - "Sandelin sign-off required before accepting §8.4 sub-cap below 300%"
   - "Sandelin review of mutual_clarification_extension for equipment supplier symmetry exposure"
   - "Legal review: does §8.4 sub-cap interact with uncapped carve-outs (BI/PD, indemnity)?"
+  - "Pilot #1 antora_response is provisional; upgrade to verified on first executed MEPA incorporating JST positions"
 
 examples:
   - "MCM Engineering (April 2026): attempted to delete §8.3 in MEPA redlines while accepting mutual consequential exclusion in PO. Cross-document analysis caught the pattern; Antora held the clause firm."

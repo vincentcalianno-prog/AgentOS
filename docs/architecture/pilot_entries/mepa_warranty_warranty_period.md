@@ -174,6 +174,7 @@ pending_items:
   - "Sandelin review of extended_warranty_for_strategic_pricing pattern — is 2% per year the right rough target?"
   - "Confirmation that tiered_warranty_by_component is acceptable in principle (some legal teams resist any tiering)"
   - "Should warranty_voidable_by_normal_operations be split into multiple reject_thresholds by void condition type?"
+  - "First executed MEPA upgrades to verified"
 
 examples:
   - "MCM Engineering (April 2026): Antora landed on 24-month-from-Acceptance / 30-month-from-shipment whichever-later structure (dual_anchor_with_acceptance_priority pattern). Documented in PO Round 3 redlines."
