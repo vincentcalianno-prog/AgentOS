@@ -8,11 +8,24 @@
 
 The Direct Damages Clarification is the explicit Antora protection against the MCM cross-document attack pattern (April 2026). It is substantively important (signature-blocker level), the MEPA template language is concrete and quotable, and it has a clear cross-clause dependency with the consequential damages exclusion. All of which made it a good stress test for the 13-entity schema model.
 
-## The MEPA template language (Antora's preferred baseline)
+## The JST-calibrated baseline (§8.1 / §8.3 / §8.4, May 2026)
 
-> **Direct Damages Clarification**. For clarity, damages arising from or relating to impacts to Antora's business, including production interruption, loss of production output, reduced throughput, scrap, rework, line downtime, and related impacts to Antora's customers (including customer claims, chargebacks, offsets, penalties, and cover costs), will be treated as direct damages and not indirect, special, incidental, or consequential damages for purposes of this Agreement.
+Provenance: Jeff/Sandelin MEPA redline feedback, May 2026. Supersedes the original §8.3 broad-list template language (which included production interruption, throughput loss, scrap, rework — these are NOT defended under the JST position).
 
-— Antora MEPA template, §8.3
+**§8.1 — Limitation Amount (Antora outbound version):**
+> Each Party's total aggregate liability shall not exceed [200%] of the total fees paid or payable under the applicable SOW or Purchase Order. Fallback: 150%. Floor: 100%. The following are not subject to the limitation of liability: (i) indemnification obligations; (ii) IP and confidentiality obligations; (iii) claims for bodily injury or property damage; (iv) claims arising from fraud or willful misconduct.
+
+— Antora MEPA template, §8.1
+
+**§8.3 — Direct Damages Clarification (three categories only):**
+> Notwithstanding §8.1, the following categories of loss shall be treated as direct damages and shall not be deemed indirect, special, incidental, or consequential damages: (i) reasonable cover costs, including costs of re-procurement from an alternate source due to Supplier's failure to deliver conforming Products on time; (ii) BOP standby, idle, and remobilization costs caused by delayed or non-conforming delivery or performance by Supplier; and (iii) customer liquidated damages assessed against Purchaser under Purchaser's customer contracts as a direct result of Supplier's breach. For the avoidance of doubt, loss of production, loss of throughput, scrap losses, and rework costs shall not be deemed direct damages under this Agreement.
+
+— Antora MEPA template, §8.3 (JST-calibrated)
+
+**§8.4 — Sub-Cap on Restored Direct Damages (new section):**
+> The aggregate liability of Supplier for all damages described in §8.3 shall not exceed three hundred percent (300%) of the total fees paid or payable under the applicable SOW or Purchase Order.
+
+— Antora MEPA template, §8.4 (JST-calibrated)
 
 ## PlaybookEntry (draft)
 
@@ -28,122 +41,150 @@ defend_baseline:
     section_id: "8.3"
     version: v1.0
   guidance: >
-    Defend this clause verbatim. It carves out production-related damages
-    (production interruption, loss of output, reduced throughput, scrap,
-    rework, line downtime, customer claims, chargebacks, offsets, penalties,
-    cover costs to Antora's customers) as DIRECT damages, not consequential.
-    This is Antora's critical protection against the MCM-style cross-document
-    attack: without this clarification, the consequential damages exclusion in
-    §8.2 would eliminate production-loss recovery if supplier equipment fails.
-    The enumerated list is exhaustive of Antora's main production-stage harms
-    and should not be narrowed. Suppliers will commonly try to delete this
-    section entirely (claiming it's an "unusual" provision) or weaken it
-    by removing enumerated items. Both are signature-blocker level rejects.
+    §8 CAP: Defend 100% cap on aggregate liability per SOW/PO as the
+    floor. Template baseline (Antora outbound version) is 200%; fallback
+    is 150%; do not accept below 100%. Uncapped carve-outs: indemnity
+    obligations, IP and confidentiality obligations, bodily injury /
+    property damage claims, fraud, willful misconduct.
+
+    §8.3 DIRECT DAMAGES — THREE CATEGORIES ONLY (JST-calibrated):
+    Restore as direct damages exactly the following three categories,
+    no more and no fewer: (1) reasonable cover costs, including costs
+    of re-procurement from an alternate source due to counterparty
+    failure to deliver conforming Products on time; (2) BOP standby,
+    idle, and remobilization costs caused by delayed or non-conforming
+    delivery or performance by counterparty; (3) customer liquidated
+    damages assessed against Antora under Antora's customer contracts
+    as a direct result of counterparty's breach.
+
+    EXPLICITLY EXCLUDED from §8.3 restoration: loss of production,
+    loss of throughput, scrap losses, rework costs. These remain
+    consequential damages under the §8.2 exclusion. Do not accept
+    counter-language that re-adds these categories, even framed as
+    "clarifications" or "for avoidance of doubt" additions.
+
+    §8.4 SUB-CAP (JST-calibrated, new section): Aggregate liability
+    for all §8.3 restored categories capped at 300% of total fees
+    paid/payable under the applicable SOW/PO. The 300% sub-cap is
+    the ceiling specifically for §8.3 categories and is separate
+    from the §8.1 general cap.
 
 accept_modifications:
-  - id: narrower_customer_impact_scope
-    description: >
-      Supplier proposes limiting customer-impact damages to specific named
-      customer categories (e.g., "Tier 1 customers only") rather than
-      "Antora's customers" generally.
-    example_language: >
-      "...related impacts to Antora's Tier 1 customers (as defined in
-      Antora's customer tier policy)..."
-    rationale: >
-      Acceptable if Antora's Tier 1 customer designation is clear and the
-      bulk of production-loss risk is concentrated there. Slightly narrower
-      but preserves core protection.
-
   - id: exclude_speculative_cover_costs
     description: >
-      Supplier proposes excluding "speculative" or "consequential" cover
-      costs while preserving direct cover costs (i.e., actual replacement
-      procurement at market rates).
+      Counterparty proposes limiting cover costs to "direct and documented"
+      re-procurement costs, excluding speculative or mark-up components.
     example_language: >
-      "...penalties, and direct cover costs (excluding speculative or
-      consequential cover costs)..."
+      "...(i) direct and documented cover costs, including actual costs
+      of re-procurement from an alternate source..."
     rationale: >
-      Acceptable. The clarification is that direct cover costs are direct
-      damages; speculative cover costs being indirect doesn't undermine
-      Antora's protection on real procurement losses.
+      Acceptable. The JST position already defends verifiable cover
+      costs; "direct and documented" aligns with that intent and does
+      not materially narrow category (i).
 
   - id: mutual_clarification_extension
     description: >
-      Supplier proposes that the direct damages clarification apply mutually
-      to supplier-side direct damages of equivalent type.
+      Counterparty proposes that the §8.3 direct damages clarification
+      apply mutually to counterparty-side direct damages of equivalent type.
     example_language: >
-      "...will be treated as direct damages for both Parties..."
+      "...the categories in §8.3 shall be treated as direct damages
+      for both Parties..."
     rationale: >
-      Acceptable. Mutuality doesn't weaken Antora's protection and may
-      strengthen supplier's willingness to accept the clause. Verify with
-      legal that no asymmetric exposure is created.
+      Acceptable. Mutuality does not weaken Antora's §8.3 protection
+      and may increase counterparty willingness to preserve the clause.
+      Verify with legal that symmetrizing the three categories for an
+      equipment supplier creates no asymmetric exposure.
+
+  - id: sub_cap_reduction_to_150_pct
+    description: >
+      Counterparty proposes reducing the §8.4 sub-cap from 300% to
+      150% of SOW/PO value, with all three §8.3 categories intact.
+    example_language: >
+      "§8.4 Sub-Cap. The aggregate liability of Supplier for all
+      damages described in §8.3 shall not exceed one hundred fifty
+      percent (150%) of the total fees paid or payable..."
+    rationale: >
+      Acceptable as a compromise position — 150% is the fallback floor
+      for §8.4. All three §8.3 categories must remain intact. Requires
+      Sandelin sign-off before accepting below 300%.
 
 reject_thresholds:
   - id: deletion_of_clause
     description: >
-      Supplier removes the Direct Damages Clarification entirely.
+      Counterparty removes §8.3 entirely.
     example_language: |
-      [section deleted from supplier markup]
+      [section deleted from counterparty markup]
     rationale: >
-      Without this clarification, the consequential damages exclusion in
-      §8.2 eliminates Antora's recovery on production-loss harms. This is
-      the MCM-finding pattern that triggered formal Antora protection.
-      Hard reject, signature-blocker.
+      Without §8.3, cover costs, BOP standby, and customer LDs are
+      captured by the §8.2 consequential exclusion — the MCM
+      cross-document attack pattern. Hard reject, signature-blocker.
 
-  - id: narrowing_to_no_customer_impacts
+  - id: re_expansion_to_broad_list
     description: >
-      Supplier removes the customer-impact clause (chargebacks, offsets,
-      penalties, cover costs to Antora's customers) while keeping the
-      production-impact clause.
+      Counterparty proposes re-adding production loss, throughput loss,
+      scrap, or rework to §8.3, reverting to the original broad-list
+      template language.
     example_language: >
-      "...will be treated as direct damages..." [customer-impact portion
-      removed]
+      "...including production interruption, loss of production output,
+      reduced throughput, scrap, rework, line downtime..."
     rationale: >
-      Antora's largest financial exposure on supplier failures is downstream
-      customer impacts, not just internal production loss. Removing the
-      customer-impact carve-out leaves the bulk of risk unprotected.
+      The JST position explicitly excludes these categories as contested
+      and speculative. Accepting re-expansion undoes the JST calibration
+      and reverts to a position counterparties will challenge as
+      "unusual." Signature-blocker reject.
 
-  - id: limiting_to_named_dollar_threshold
+  - id: deletion_of_section_8_4_sub_cap
     description: >
-      Supplier proposes a hard dollar cap on direct damages even when
-      production impacts exceed that cap.
+      Counterparty deletes §8.4 or folds §8.3 back into the §8.1
+      general cap (effectively removing the 300% sub-cap structure).
     example_language: >
-      "...will be treated as direct damages up to $X..."
+      "§8.4 deleted." or "§8.3 damages shall be subject to the
+      limitation in §8.1."
     rationale: >
-      Defeats the purpose of the clarification. Production interruption
-      from grid-critical equipment can exceed any reasonable threshold.
-      The point of designating these as direct damages is to recover
-      under the overall LoL cap (not under a separate sub-cap).
+      §8.4 is the structural counterpart to §8.3: it sets the ceiling
+      on Antora's recoverable direct damages, making the §8.3 restoration
+      commercially acceptable to counterparties. Deleting it either
+      renders §8.3 recoveries unlimited (counterparty will refuse) or
+      re-subjects them to the 100% general cap (Antora loses the benefit).
+      Hard reject.
 
   - id: reclassification_as_consequential
     description: >
-      Supplier proposes language that explicitly classifies any of the
-      enumerated items as "consequential" or "indirect" damages.
+      Counterparty proposes language that explicitly classifies any of
+      the three §8.3 categories as consequential or indirect damages.
     example_language: >
-      "...such impacts shall be treated as consequential damages..."
+      "...BOP standby costs shall be treated as consequential damages
+      for purposes of this Agreement..."
     rationale: >
-      Direct contradiction of the clause's intent. Hard reject.
+      Direct contradiction of §8.3's intent. Hard reject.
 
 negotiability: signature_blocker
 
-constraints: {}
+constraints:
+  lol_cap_min_pct: 100           # §8.1 floor — do not accept below 100% of SOW/PO value
+  direct_damages_sub_cap_pct: 300  # §8.4 target — negotiate down to 150% at floor
 
 pending_items:
-  - "Sandelin review of all three accept_modifications patterns, especially mutual_clarification_extension"
-  - "Sandelin confirmation of negotiability: signature_blocker designation"
-  - "Confirmation that constraints: {} is correct for this clause (no numeric thresholds)"
+  - "Sandelin confirmation of JST §8.3 three-category restriction vs. original broad-list language"
+  - "Sandelin sign-off required before accepting §8.4 sub-cap below 300%"
+  - "Sandelin review of mutual_clarification_extension for equipment supplier symmetry exposure"
+  - "Legal review: does §8.4 sub-cap interact with uncapped carve-outs (BI/PD, indemnity)?"
+
 examples:
-  - "MCM Engineering (April 2026): attempted to delete this clause in MEPA redlines while accepting mutual consequential exclusion in PO. Cross-document analysis caught the pattern; Antora held the clause firm."
+  - "MCM Engineering (April 2026): attempted to delete §8.3 in MEPA redlines while accepting mutual consequential exclusion in PO. Cross-document analysis caught the pattern; Antora held the clause firm."
+
 related_entries:
   - "mepa.limitation_of_liability.disclaimer_of_certain_damages"
+  - "mepa.limitation_of_liability.lol_amount"
 
 metadata:
   created_date: 2026-05-29
-  last_revised: 2026-05-29
+  last_revised: 2026-05-30
+  provenance: "Jeff/Sandelin MEPA redline feedback, May 2026. §8.3 narrowed to three categories (cover costs, BOP standby/remobilization, customer LDs); §8.4 sub-cap at 300% added. Supersedes original broad-list §8.3 template language."
   notes: >
-    Pilot entry — first drafted during Step 2c schema validation exercise.
-    Sandelin review pending for all fields. The mutual_clarification_extension
-    accept pattern should be explicitly Sandelin-validated before deployment.
+    Pilot updated to JST-calibrated §8 positions (Step 0b, 2026-05-30).
+    Original pilot drafted 2026-05-29 during Step 2c schema validation.
+    Sandelin review pending for all content fields.
 
 review_status: draft
 last_reviewed_by: null
@@ -151,13 +192,66 @@ last_reviewed_date: null
 
 antora_response:
   rejection_response:
-    rationale: null
-    counter_proposal: null
+    rationale: >
+      Deletion or expansion of §8.3 beyond the three named categories is
+      unacceptable. Without §8.3, cover costs, BOP standby losses, and
+      customer LD exposure are captured by the §8.2 consequential exclusion —
+      exactly the MCM cross-document attack pattern. Attempts to re-add
+      production loss, throughput, scrap, or rework to §8.3 are also rejected:
+      the JST position narrows to three verifiable categories with clear causal
+      proximity to counterparty breach; re-expansion introduces contested,
+      speculative claims that will be litigated on causation grounds. Deletion
+      of §8.4 is equally unacceptable: it is the structural counterpart to §8.3
+      that defines the ceiling on restored damages; without it, §8.3 categories
+      either become unlimited (counterparty will refuse to sign) or revert to
+      the §8.1 general cap (Antora loses the higher sub-cap protection).
+    counter_proposal: >
+      Restore §8.3 to the three-category JST baseline with §8.4 sub-cap:
+
+      "§8.3 Direct Damages. Notwithstanding the limitation of liability in
+      §8.1, the following categories of loss shall be treated as direct damages
+      and shall not be deemed indirect, special, incidental, or consequential
+      damages: (i) reasonable cover costs, including costs of re-procurement
+      from an alternate source due to Supplier's failure to deliver conforming
+      Products on time; (ii) BOP standby, idle, and remobilization costs caused
+      by delayed or non-conforming delivery or performance by Supplier; and
+      (iii) customer liquidated damages assessed against Purchaser under
+      Purchaser's customer contracts as a direct result of Supplier's breach.
+      For the avoidance of doubt, loss of production, loss of throughput, scrap
+      losses, and rework costs shall not be deemed direct damages under this
+      Agreement.
+
+      §8.4 Sub-Cap. The aggregate liability of Supplier for all damages
+      described in §8.3 shall not exceed three hundred percent (300%) of the
+      total fees paid or payable under the applicable SOW or Purchase Order."
   compromise_response:
-    conditions: null
-    revised_language: null
+    conditions: >
+      If counterparty cannot accept the 200% overall LOL baseline, Antora
+      may fall back to 100% (§8.1 floor) with §8.3 three categories and
+      §8.4 300% sub-cap fully intact. If counterparty insists on reducing
+      the §8.4 sub-cap below 300%, the floor is 150% of SOW/PO value —
+      subject to Sandelin sign-off. Any compromise must preserve all three
+      §8.3 categories intact; removing or narrowing any one category is a
+      rejection trigger, not a compromise position.
+    revised_language: >
+      For a reduced §8.4 sub-cap compromise (150% floor):
+
+      "§8.4 Sub-Cap. The aggregate liability of Supplier for all damages
+      described in §8.3 shall not exceed one hundred fifty percent (150%) of
+      the total fees paid or payable under the applicable SOW or Purchase Order."
+
+      §8.3 language above remains unchanged from the counter-proposal.
   acceptance_response:
-    rationale: null
+    rationale: >
+      Accept without counter when all of the following are met: (a) §8.3
+      restores exactly the three named categories — cover costs, BOP
+      standby/remobilization, customer LDs — and does not add production
+      loss, throughput, scrap, or rework; (b) §8.4 sub-cap is present at
+      300% or higher of SOW/PO value; (c) §8.1 overall cap is at or above
+      100% of SOW/PO value; (d) uncapped carve-outs for indemnity, IP,
+      confidentiality, BI/PD, fraud, and willful misconduct are intact.
+      If all four conditions are satisfied, Antora's JST baseline protection
+      is intact and no counter is needed.
 
 outcome_log: []
 

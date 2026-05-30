@@ -186,13 +186,13 @@ related_entries:
 
 metadata:
   created_date: 2026-05-29
-  last_revised: 2026-05-29
+  last_revised: 2026-05-30
+  provenance: "MEPA template baseline + Antora standard warranty position. Baseline = 3 years from Purchaser's Acceptance per §6.1(vi). MCM's 24-month-from-commissioning / 30-month-from-shipment figure is counterparty-specific and is NOT the template baseline."
   notes: >
-    Second pilot entry — drafted during Step 2c schema validation.
-    Exercises parametric negotiability and populated constraints
-    (untested in first pilot). Sandelin review pending. The min_warranty_months
-    constraint (24) was set from Vincent's negotiation memory; Sandelin
-    should confirm or adjust.
+    Second pilot entry updated to confirm template baseline and populate
+    antora_response (Step 0b, 2026-05-30). Originally drafted 2026-05-29
+    during Step 2c schema validation. Sandelin review pending for all
+    content fields including the 24-month floor.
 
 review_status: draft
 last_reviewed_by: null
@@ -200,13 +200,71 @@ last_reviewed_date: null
 
 antora_response:
   rejection_response:
-    rationale: null
-    counter_proposal: null
+    rationale: >
+      Any warranty period shorter than 24 months from any qualifying trigger,
+      or anchored solely to shipment or delivery without an Acceptance-based
+      component, is unacceptable. Pure shipment-based triggers start the clock
+      before Antora has validated that the equipment functions — effectively
+      transferring commissioning risk to Antora. For complex equipment,
+      commissioning can take six months or more; a shipment-only anchor burns
+      a significant fraction of the warranty period before the system is
+      operational. Warranty conditions that void coverage based on normal
+      industrial operation (continuous use, daily operating hours) are
+      similarly unacceptable — these are warranty disclaimers, not warranty
+      terms. The template baseline is 3 years from Purchaser's Acceptance;
+      MCM's 24-month-from-commissioning / 30-month-from-shipment is
+      counterparty-specific and is not the baseline to defend from.
+    counter_proposal: >
+      Restore §6.1(vi) to the template baseline:
+
+      "...for a period of three (3) years from Purchaser's Acceptance of the
+      Products ('Warranty Period'), the Products and any System delivered under
+      this Agreement will materially conform to the specifications, functional
+      requirements, and performance requirements set forth in the applicable
+      SOW or Purchase Order."
   compromise_response:
-    conditions: null
-    revised_language: null
+    conditions: >
+      If counterparty cannot accept 3 years from Acceptance, Antora may
+      negotiate down to 24 months from Acceptance (the floor), subject to:
+      (a) the trigger remains Purchaser's Acceptance — not shipment or
+      delivery; commissioning-based triggers are acceptable only if
+      "commissioning" is defined in the SOW against a documented, verifiable
+      milestone (commissioning report, SAT completion); (b) downstream
+      clauses (Service Period, Spare Parts availability, Repairs/Remedies)
+      are either anchored independently or extended to compensate for the
+      shorter Warranty Period base — silent cascade must be explicitly
+      addressed; (c) Sandelin sign-off is required before accepting any
+      duration below 30 months. A dual-anchor structure (Acceptance-or-N-
+      months-from-shipment, whichever is later) may be acceptable if the
+      Acceptance-based duration is at least 24 months and supplier's need
+      for commercial certainty on the outer bound is documented.
+    revised_language: >
+      For a 24-month-from-Acceptance compromise:
+
+      "...for a period of twenty-four (24) months from Purchaser's Acceptance
+      of the Products ('Warranty Period'), the Products and any System
+      delivered under this Agreement will materially conform to the
+      specifications, functional requirements, and performance requirements
+      set forth in the applicable SOW or Purchase Order."
+
+      For a dual-anchor compromise (24-month Acceptance floor):
+
+      "...for a period of twenty-four (24) months from Purchaser's Acceptance,
+      or thirty (30) months from the date of shipment, whichever is later
+      ('Warranty Period'), the Products and any System delivered under this
+      Agreement will materially conform..."
   acceptance_response:
-    rationale: null
+    rationale: >
+      Accept without counter when all of the following are met: (a) the
+      trigger is Purchaser's Acceptance — not shipment, delivery, or an
+      undefined event; (b) the Warranty Period is at least 36 months (3
+      years) from Acceptance; (c) no void conditions based on normal
+      industrial operation (continuous use, operating hours, duty cycles)
+      are present. If the counterparty proposes a dual-anchor structure
+      where the Acceptance-based duration is 36 months or greater and the
+      shipment-based outer bound does not materially shorten the effective
+      period, accept. If all three conditions are met, the template baseline
+      is intact and no counter is needed.
 
 outcome_log: []
 
