@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import json
 import uuid
-from dataclasses import asdict, dataclass, replace
+from dataclasses import asdict, dataclass, field, replace
 from datetime import datetime, timezone
 from typing import Callable, Optional
 
@@ -38,6 +38,43 @@ ANALYSIS_FILENAME = "redline_analysis.json"
 
 
 @dataclass(frozen=True)
+class RejectionResponse:
+    """Antora's rejection state: rationale for rejecting + concrete counter-language."""
+    rationale: str = ""
+    counter_proposal: str = ""
+
+
+@dataclass(frozen=True)
+class CompromiseResponse:
+    """Antora's compromise state: conditions for partial acceptance + revised language."""
+    conditions: str = ""
+    revised_language: str = ""
+
+
+@dataclass(frozen=True)
+class AcceptanceResponse:
+    """Antora's acceptance state: rationale for why the position already protects Antora."""
+    rationale: str = ""
+
+
+@dataclass(frozen=True)
+class AntoraResponse:
+    """Three-state structured response block for a clause redline.
+
+    Production analyzers MUST populate all three states for each clause:
+      rejection_response  — rationale for rejecting + counter-language restoring Antora's position
+      compromise_response — conditions under which partial acceptance is allowed + revised language
+      acceptance_response — rationale for when the counterparty position already satisfies Antora
+
+    Do NOT hardcode Antora-specific positions here. All content is injected via playbook_context
+    at runtime in layer_c_antora. This dataclass defines the output contract shape only.
+    """
+    rejection_response: RejectionResponse = field(default_factory=RejectionResponse)
+    compromise_response: CompromiseResponse = field(default_factory=CompromiseResponse)
+    acceptance_response: AcceptanceResponse = field(default_factory=AcceptanceResponse)
+
+
+@dataclass(frozen=True)
 class ClauseRecommendation:
     """LLM recommendation for a single changed clause."""
     clause_reference: str
@@ -48,6 +85,7 @@ class ClauseRecommendation:
     requires_legal_review: bool
     is_signature_blocker: bool = False  # True if this clause must be resolved before signature
     original_text: str = ""             # Carried from DiffEntry; enables verbatim restore in Agent 6
+    antora_response: Optional[AntoraResponse] = None  # populated by production analyzers; None in stubs
 
 
 def _null_analyzer(

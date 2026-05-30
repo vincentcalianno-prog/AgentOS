@@ -1,8 +1,8 @@
 # ACP Playbook Schemas (Step 2b Locked Design)
 
 This document archives the schema decisions locked during Step 2b of the ACP playbook
-architecture session (2026-05-29). It covers 14 schema entities that define the structural
-skeleton of the ACP playbook: how contract types relate to one another, how clauses are
+architecture session (2026-05-29), with Step 0 additions on 2026-05-30. It covers 15 schema
+entities that define the structural skeleton of the ACP playbook: how contract types relate to one another, how clauses are
 organized and positioned, how overlays tighten those positions for specific counterparties or
 projects, and how runtime concessions are authorized and logged.
 
@@ -232,6 +232,19 @@ PlaybookEntry:
   review_status: enum                  # draft | approved | deprecated
   last_reviewed_by: Optional[str]      # identity of reviewer, e.g., "sandelin.sikes"
   last_reviewed_date: Optional[date]
+
+  antora_response:                     # optional; populated by production analyzers — NOT by schema authoring
+    rejection_response:
+      rationale: str                   # why the counterparty's deletion/broadening is unacceptable
+      counter_proposal: str            # clean restoration language Antora proposes
+    compromise_response:
+      conditions: str                  # circumstances under which Antora accepts a modified position
+      revised_language: str            # the revised language Antora would accept under those conditions
+    acceptance_response:
+      rationale: str                   # why the counterparty's position already protects Antora
+
+  outcome_log: List[OutcomeRecord]     # default: [] — appended from closed negotiations
+  evidence_tier: enum                  # verified | provisional (default: provisional)
 ```
 
 Notes:
@@ -248,6 +261,18 @@ Notes:
   `last_reviewed_date` support content quality tracking. Three values only — in-flight
   states like "pending_review" are project-management metadata that do not change how the
   agent uses the entry and therefore do not belong in Layer A substrate.
+- `antora_response` is the three-state structured response block populated by production
+  analyzers (Agent 5 output contract). All three states must be populated: rejection
+  (rationale + counter-language), compromise (conditions + revised language), and acceptance
+  (rationale for when no counter is needed). Content is injected via playbook_context at
+  runtime in layer_c_antora; this field is always null in schema stubs.
+- `outcome_log` accumulates OutcomeRecord entries as negotiations close. Starts empty;
+  appended to by Layer C logic after each completed negotiation. Never modified retroactively.
+- `evidence_tier` tracks the epistemic status of the entry's positions. `provisional` means
+  the position is authored judgment awaiting validation by closed negotiations. `verified`
+  means at least one real negotiation has closed and the positions held. SEPARATE from
+  `review_status` — an entry may be `review_status: approved` (legal signed off) while
+  `evidence_tier: provisional` (no closed negotiations yet to confirm it in practice).
 
 ---
 
@@ -535,6 +560,42 @@ TemplateVersion:
 
 ---
 
+## Entity 15: OutcomeRecord
+
+OutcomeRecord captures the result of a single closed negotiation for a specific clause. It
+is the primitive unit of empirical evidence that upgrades a PlaybookEntry from `provisional`
+to `verified` over time. OutcomeRecords are authored by Layer C logic after each negotiation
+closes; they are never manually edited after creation.
+
+The `abstraction_status` field tracks whether the pattern in this outcome has been reviewed
+for potential Overlay creation. `pending` is the default; `extracted` means a ConcessionPromotion
+was created; `skipped` means the pattern was reviewed and judged not worth promoting; `flagged_for_review`
+means the portfolio aggregator flagged it as a repeated pattern requiring human review.
+
+```yaml
+OutcomeRecord:
+  date: date                           # date the negotiation closed
+  counterparty: str                    # counterparty name — use "counterparty", NOT "supplier"
+  agent_recommendation: str            # what Agent 5 recommended for this clause
+  actual_outcome: str                  # what was actually negotiated and accepted
+  rounds_to_close: int                 # how many rounds of back-and-forth before close
+  sandelin_override: bool              # true if legal counsel overrode the agent recommendation
+  abstraction_status: enum             # pending | extracted | skipped | flagged_for_review (default: pending)
+  notes: Optional[str]                 # freeform context for this outcome
+```
+
+Notes:
+- `counterparty` uses the generic term, not "supplier" or "vendor". OutcomeRecord must
+  remain portable across deployment contexts.
+- `sandelin_override: true` does not mean the agent was wrong — it means human judgment
+  diverged from the automated recommendation. These cases are the most valuable for
+  improving the playbook.
+- `abstraction_status` drives the ConcessionPromotion workflow. Agent 9 (Portfolio
+  Aggregator) reads this field to surface patterns where `flagged_for_review` entries
+  cluster around the same PlaybookEntry across counterparties.
+
+---
+
 ## Open items for Step 2c
 
 The following were deliberately left open at the end of Step 2b. Step 2c does not begin
@@ -574,6 +635,12 @@ to this document and are no longer listed as deferred: dropping `is_signature_bl
 adding three-value review tracking, establishing `template_ref.version` semantic versioning
 via TemplateRegistry, and adding `pending_items` / `examples` / `related_entries` as
 structured top-level fields on PlaybookEntry.
+
+Three Step 0 additions (2026-05-30) have been applied and are no longer deferred: `antora_response`
+(three-state structured response block — rejection / compromise / acceptance), `outcome_log`
+(List[OutcomeRecord], default empty) as the empirical evidence accumulator, and `evidence_tier`
+(verified | provisional, default provisional) as a field separate from `review_status`. Entity 15
+(OutcomeRecord) was added as the primitive unit of closed-negotiation evidence.
 
 - **Fourth overlay axis (geography, regulatory tier, value tier).** The axis enum is the
   extension point. Add a fourth value when authoring real overlays reveals that none of the

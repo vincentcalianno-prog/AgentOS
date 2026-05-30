@@ -148,6 +148,20 @@ metadata:
 review_status: draft
 last_reviewed_by: null
 last_reviewed_date: null
+
+antora_response:
+  rejection_response:
+    rationale: null
+    counter_proposal: null
+  compromise_response:
+    conditions: null
+    revised_language: null
+  acceptance_response:
+    rationale: null
+
+outcome_log: []
+
+evidence_tier: provisional
 ```
 
 ## CrossClauseDependency (draft)
