@@ -14,7 +14,9 @@ from datetime import datetime, timezone
 from acp.layer_b.agents.redline_analysis import (
     ANALYSIS_FILENAME,
     ClauseRecommendation,
+    LrsConfidenceTier,
     RedlineAnalyzer,
+    resolve_confidence_tier,
 )
 from acp.layer_b.core.adapters.in_memory_audit import InMemoryAuditLog
 from acp.layer_b.core.types import (
@@ -577,3 +579,56 @@ class OriginalTextPropagationTests(unittest.TestCase):
         doc = json.loads(storage.retrieve(_ANALYSIS_PATH).decode())
         rec = doc["recommendations"][0]
         self.assertEqual(rec["original_text"], "Indemnity shall be mutual and unlimited.")
+
+
+def _base_rec(**overrides) -> ClauseRecommendation:
+    """Minimal valid ClauseRecommendation with sensible defaults."""
+    defaults = dict(
+        clause_reference="1.1",
+        recommendation="reject",
+        reasoning="test",
+        playbook_reference=None,
+        confidence="high",
+        requires_legal_review=False,
+    )
+    defaults.update(overrides)
+    return ClauseRecommendation(**defaults)
+
+
+class ResolveConfidenceTierTests(unittest.TestCase):
+    """resolve_confidence_tier() returns the correct LrsConfidenceTier."""
+
+    def test_returns_playbook_verified_when_grounded_and_verified_in_source(self):
+        rec = _base_rec(
+            playbook_grounded=True,
+            evidence_source="mepa.lol.direct_damages | verified | MCM PO T&Cs, May 6",
+        )
+        self.assertEqual(resolve_confidence_tier(rec), LrsConfidenceTier.PLAYBOOK_VERIFIED)
+
+    def test_returns_playbook_provisional_when_grounded_and_provisional_in_source(self):
+        rec = _base_rec(
+            playbook_grounded=True,
+            evidence_source="mepa.warranty.period | provisional | Jeff/Sandelin feedback",
+        )
+        self.assertEqual(resolve_confidence_tier(rec), LrsConfidenceTier.PLAYBOOK_PROVISIONAL)
+
+    def test_returns_playbook_provisional_when_grounded_and_evidence_source_is_none(self):
+        rec = _base_rec(playbook_grounded=True, evidence_source=None)
+        self.assertEqual(resolve_confidence_tier(rec), LrsConfidenceTier.PLAYBOOK_PROVISIONAL)
+
+    def test_returns_agent_reasoned_when_not_grounded(self):
+        rec = _base_rec(playbook_grounded=False, evidence_source=None)
+        self.assertEqual(resolve_confidence_tier(rec), LrsConfidenceTier.AGENT_REASONED)
+
+    def test_agent_reasoned_ignores_evidence_source_when_not_grounded(self):
+        """evidence_source is irrelevant if playbook_grounded=False."""
+        rec = _base_rec(
+            playbook_grounded=False,
+            evidence_source="mepa.lol.direct_damages | verified | MCM PO T&Cs, May 6",
+        )
+        self.assertEqual(resolve_confidence_tier(rec), LrsConfidenceTier.AGENT_REASONED)
+
+    def test_default_recommendation_is_playbook_provisional(self):
+        """Default field values: playbook_grounded=True, evidence_source=None → PROVISIONAL."""
+        rec = _base_rec()
+        self.assertEqual(resolve_confidence_tier(rec), LrsConfidenceTier.PLAYBOOK_PROVISIONAL)

@@ -15,6 +15,7 @@ import json
 import uuid
 from dataclasses import asdict, dataclass, field, replace
 from datetime import datetime, timezone
+from enum import Enum
 from typing import Callable, Optional
 
 from acp.layer_b.core.adapters.audit_adapter import AuditEvent, AuditLogAdapter
@@ -74,6 +75,17 @@ class AntoraResponse:
     acceptance_response: AcceptanceResponse = field(default_factory=AcceptanceResponse)
 
 
+class LrsConfidenceTier(Enum):
+    PLAYBOOK_VERIFIED    = "playbook_verified"
+    # Playbook hit + evidence_tier = verified (Tier 1 closed agreement)
+
+    PLAYBOOK_PROVISIONAL = "playbook_provisional"
+    # Playbook hit + evidence_tier = provisional (Tier 2 Jeff/Sandelin feedback)
+
+    AGENT_REASONED       = "agent_reasoned"
+    # No playbook entry; LLM-reasoned from general contract principles
+
+
 @dataclass(frozen=True)
 class ClauseRecommendation:
     """LLM recommendation for a single changed clause."""
@@ -84,8 +96,30 @@ class ClauseRecommendation:
     confidence: str              # "high" | "medium" | "low"
     requires_legal_review: bool
     is_signature_blocker: bool = False  # True if this clause must be resolved before signature
+    playbook_grounded: bool = True
+    # True  → Agent 5 matched a PlaybookEntry; counter sourced from antora_response
+    # False → No PlaybookEntry exists for this clause; response is LLM-reasoned
+    evidence_source: Optional[str] = None
+    # Populated when playbook_grounded=True.
+    # Format: "<entry_id> | <evidence_tier> | <source_description>"
+    # Examples:
+    #   "mepa.lol.direct_damages | verified | MCM PO T&Cs, May 6"
+    #   "mepa.warranty.period | provisional | Jeff/Sandelin feedback"
+    # Stays None when playbook_grounded=False (no entry to cite)
     original_text: str = ""             # Carried from DiffEntry; enables verbatim restore in Agent 6
     antora_response: Optional[AntoraResponse] = None  # populated by production analyzers; None in stubs
+
+
+def resolve_confidence_tier(rec: ClauseRecommendation) -> LrsConfidenceTier:
+    """Derive the LRS confidence tier from a ClauseRecommendation.
+
+    Pure function — no side effects, no I/O. Called by Agent 7 during LRS rendering.
+    """
+    if not rec.playbook_grounded:
+        return LrsConfidenceTier.AGENT_REASONED
+    if rec.evidence_source and "verified" in rec.evidence_source:
+        return LrsConfidenceTier.PLAYBOOK_VERIFIED
+    return LrsConfidenceTier.PLAYBOOK_PROVISIONAL
 
 
 def _null_analyzer(
@@ -104,6 +138,8 @@ def _null_analyzer(
         playbook_reference=None,
         confidence="low",
         requires_legal_review=True,
+        playbook_grounded=False,
+        evidence_source=None,
     )
 
 
@@ -294,6 +330,8 @@ class RedlineAnalyzer:
                 playbook_reference=None,
                 confidence="low",
                 requires_legal_review=True,
+                playbook_grounded=False,
+                evidence_source=None,
                 original_text=original_text,
             )
 
