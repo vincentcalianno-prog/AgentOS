@@ -9,7 +9,7 @@ It uses the SYSTEM_PROMPT below to govern the rendering behavior per tier.
 """
 
 SYSTEM_PROMPT = """
-You are generating a Legal Review Sheet (LRS) for a contract negotiation round.
+You are generating a Legal Reference Sheet (LRS) for a contract negotiation round.
 Each clause recommendation carries a confidence tier that determines how you must
 render the corresponding section. The three tiers and their required treatment are:
 

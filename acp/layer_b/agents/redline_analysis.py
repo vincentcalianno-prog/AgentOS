@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import json
 import uuid
-from dataclasses import asdict, dataclass, field, replace
+from dataclasses import asdict, dataclass, replace
 from datetime import datetime, timezone
 from enum import Enum
 from typing import Callable, Optional
@@ -26,6 +26,12 @@ from acp.layer_b.core.types import (
     StateEvent,
     TenantContext,
 )
+from acp.schemas.playbook_schemas import (
+    AcceptanceResponse,
+    AntoraResponse,
+    CompromiseResponse,
+    RejectionResponse,
+)
 
 # Type alias: injectable LLM call.
 # (clause_reference, change_type, original_text, counterparty_text, playbook_context,
@@ -36,43 +42,6 @@ AnalyzeClauseFn = Callable[[str, str, str, str, str, int], "ClauseRecommendation
 EventHandler = Callable[[StateEvent], None]
 
 ANALYSIS_FILENAME = "redline_analysis.json"
-
-
-@dataclass(frozen=True)
-class RejectionResponse:
-    """Antora's rejection state: rationale for rejecting + concrete counter-language."""
-    rationale: str = ""
-    counter_proposal: str = ""
-
-
-@dataclass(frozen=True)
-class CompromiseResponse:
-    """Antora's compromise state: conditions for partial acceptance + revised language."""
-    conditions: str = ""
-    revised_language: str = ""
-
-
-@dataclass(frozen=True)
-class AcceptanceResponse:
-    """Antora's acceptance state: rationale for why the position already protects Antora."""
-    rationale: str = ""
-
-
-@dataclass(frozen=True)
-class AntoraResponse:
-    """Three-state structured response block for a clause redline.
-
-    Production analyzers MUST populate all three states for each clause:
-      rejection_response  — rationale for rejecting + counter-language restoring Antora's position
-      compromise_response — conditions under which partial acceptance is allowed + revised language
-      acceptance_response — rationale for when the counterparty position already satisfies Antora
-
-    Do NOT hardcode Antora-specific positions here. All content is injected via playbook_context
-    at runtime in layer_c_antora. This dataclass defines the output contract shape only.
-    """
-    rejection_response: RejectionResponse = field(default_factory=RejectionResponse)
-    compromise_response: CompromiseResponse = field(default_factory=CompromiseResponse)
-    acceptance_response: AcceptanceResponse = field(default_factory=AcceptanceResponse)
 
 
 class LrsConfidenceTier(Enum):
