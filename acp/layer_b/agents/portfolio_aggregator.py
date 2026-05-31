@@ -32,6 +32,7 @@ from acp.layer_b.core.types import (
     PortfolioReadContext,
     WorkItem,
 )
+from acp.schemas.playbook_schemas import PlaybookEntry, ReviewerReaction
 
 
 class PortfolioAggregatorAgent:
@@ -181,6 +182,38 @@ class PortfolioAggregatorAgent:
             "owner_count": len(counts),
         })
         return counts
+
+    def detect_playbook_update_candidates(
+        self,
+        entries: list[PlaybookEntry],
+    ) -> list[tuple[str, int, str]]:
+        """Surface PlaybookEntry candidates for playbook update review.
+
+        An entry is a candidate when its recommendation_reviews list contains
+        2 or more EDITED reactions from legal reviewers (reviewer_role starts
+        with "legal:"). Multiple legal edits on the same clause type are the
+        strongest signal that the playbook position needs recalibration.
+
+        Returns a list of (entry_id, edit_count, sample_rationale) tuples.
+        sample_rationale is the rationale from the first qualifying EDITED
+        review, or "" if no rationale was provided.
+
+        Does NOT update the playbook — surfaces candidates for Sandelin's
+        review only. Phase 3 notification wiring goes here.
+
+        # TODO Phase 3: wire to notification system
+        """
+        candidates = []
+        for entry in entries:
+            legal_edits = [
+                r for r in entry.recommendation_reviews
+                if r.reaction == ReviewerReaction.EDITED
+                and r.reviewer_role.startswith("legal:")
+            ]
+            if len(legal_edits) >= 2:
+                sample_rationale = legal_edits[0].rationale if legal_edits else ""
+                candidates.append((entry.id, len(legal_edits), sample_rationale))
+        return candidates
 
     # ------------------------------------------------------------------ #
     # Internal helpers                                                     #
