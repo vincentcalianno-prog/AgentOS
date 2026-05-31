@@ -62,7 +62,10 @@ from acp.layer_b.core.types import (
     StateEvent,
     TenantContext,
 )
+from acp.layer_b.loaders.pilot_entry_loader import PilotEntryLoader
 from acp.layer_b.tests.fixtures.synthetic_config import SYNTHETIC_CONFIG
+
+_pilot_loader = PilotEntryLoader()
 
 # Import harness-local modules
 _HARNESS_DIR = Path(__file__).parent
@@ -148,41 +151,79 @@ def _stub_analyze_clause(
     """Deterministic stub analyzer for dry-run purposes.
 
     Decision rules (no LLM):
-    - deleted → reject, is_signature_blocker=True if it's section 6.x (indemnity)
+    - Pilot entry lookup drives playbook_grounded, evidence_source, and
+      is_signature_blocker when negotiability=="signature_blocker".
+    - deleted → reject, is_signature_blocker=True for §6.x or playbook
+      signature_blocker entries
     - added   → escalate, requires_legal_review=True
-    - modified (payment terms shortening) → reject
+    - modified + signature_blocker → reject with is_signature_blocker=True
     - modified (other) → negotiate
     """
-    is_indemnity = clause_reference.startswith("6.")
+    # Pilot entry lookup — populates playbook_grounded and evidence_source
+    pilot_ref = _pilot_loader.lookup(clause_reference)
+    playbook_grounded = pilot_ref is not None
+    evidence_source = (
+        f"{pilot_ref.entry_id} | {pilot_ref.evidence_tier} | {pilot_ref.description}"
+        if pilot_ref is not None else None
+    )
+
+    # Signature-blocker detection: §6.x indemnity heuristic OR playbook says so
+    is_signature_blocker = (
+        clause_reference.startswith("6.")
+        or (pilot_ref is not None and pilot_ref.negotiability == "signature_blocker")
+    )
+    playbook_ref = pilot_ref.entry_id if pilot_ref is not None else None
+
     if change_type == "deleted":
         return ClauseRecommendation(
             clause_reference=clause_reference,
             recommendation="reject",
             reasoning=f"Clause {clause_reference} deleted by counterparty. Stub: restore required.",
-            playbook_reference=None,
+            playbook_reference=playbook_ref,
             confidence="high",
-            requires_legal_review=is_indemnity,
-            is_signature_blocker=is_indemnity,
+            requires_legal_review=is_signature_blocker,
+            is_signature_blocker=is_signature_blocker,
+            playbook_grounded=playbook_grounded,
+            evidence_source=evidence_source,
         )
     if change_type == "added":
         return ClauseRecommendation(
             clause_reference=clause_reference,
             recommendation="escalate",
             reasoning=f"Clause {clause_reference} added by counterparty. Stub: legal review required.",
-            playbook_reference=None,
+            playbook_reference=playbook_ref,
             confidence="medium",
             requires_legal_review=True,
             is_signature_blocker=False,
+            playbook_grounded=playbook_grounded,
+            evidence_source=evidence_source,
         )
-    # modified
+    # modified — signature blockers reject; all others negotiate
+    if is_signature_blocker:
+        return ClauseRecommendation(
+            clause_reference=clause_reference,
+            recommendation="reject",
+            reasoning=(
+                f"Clause {clause_reference} is a signature blocker per playbook. "
+                "Stub: reject required."
+            ),
+            playbook_reference=playbook_ref,
+            confidence="high",
+            requires_legal_review=True,
+            is_signature_blocker=True,
+            playbook_grounded=playbook_grounded,
+            evidence_source=evidence_source,
+        )
     return ClauseRecommendation(
         clause_reference=clause_reference,
         recommendation="negotiate",
         reasoning=f"Clause {clause_reference} modified. Stub: propose compromise.",
-        playbook_reference=None,
+        playbook_reference=playbook_ref,
         confidence="medium",
         requires_legal_review=False,
         is_signature_blocker=False,
+        playbook_grounded=playbook_grounded,
+        evidence_source=evidence_source,
     )
 
 

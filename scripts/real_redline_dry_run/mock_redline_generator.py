@@ -53,6 +53,11 @@ _ORIGINAL_CLAUSES: dict[str, str] = {
         "to the other party, provided that all Transaction Confirmations in effect shall continue to be "
         "performed for their stated terms unless separately terminated."
     ),
+    "5.1": (
+        "Each party represents and warrants that: (a) it is duly organized and validly existing; "
+        "(b) it has full authority to execute and perform this Agreement; "
+        "(c) execution does not violate any law, regulation, or agreement to which it is a party."
+    ),
     "6.1": (
         "Each party (the \"Indemnifying Party\") shall indemnify, defend, and hold harmless the other party "
         "and its officers, directors, employees, and agents from and against any and all third-party claims, "
@@ -65,6 +70,10 @@ _ORIGINAL_CLAUSES: dict[str, str] = {
         "including but not limited to: acts of God, fire, flood, earthquake, storm, lightning, epidemic, "
         "war, terrorism, acts of governmental authority, grid operator curtailment orders, or failure of "
         "third-party transmission facilities."
+    ),
+    "8.3": (
+        "Any legal proceeding arising under this Agreement shall be brought exclusively "
+        "in the state or federal courts located in Travis County, Texas."
     ),
 }
 
@@ -118,6 +127,34 @@ _COUNTERPARTY_MODIFICATIONS: dict[str, dict] = {
             "war, terrorism, acts of governmental authority, grid operator curtailment orders, failure of "
             "third-party transmission facilities, supply chain disruptions affecting energy components or "
             "fuel supply, or any other event that makes performance commercially impractical."
+        ),
+    },
+    # --- Pilot-entry patterns (clause references map to authored PlaybookEntries) ---
+    # Content mismatch with base MEPA is intentional: these patterns exercise
+    # playbook lookup and confidence tier rendering, not template fidelity.
+    "warranty_period_shortening": {
+        "clause": "5.1",
+        "heading": "### 5.1 Mutual Representations",
+        "description": "modified: counterparty proposes 12-month warranty period instead of 36 months",
+        "new_text": (
+            "Each party represents and warrants that: (a) it is duly organized and validly existing; "
+            "(b) it has full authority to execute and perform this Agreement; "
+            "(c) execution does not violate any law, regulation, or agreement to which it is a party. "
+            "Supplier's warranty obligations shall expire twelve (12) months from the date of shipment."
+        ),
+    },
+    "lol_direct_damages_expansion": {
+        "clause": "8.3",
+        "heading": "### 8.3 Venue",
+        "description": (
+            "modified: counterparty expands direct damages to include production loss and throughput"
+        ),
+        "new_text": (
+            "Any legal proceeding arising under this Agreement shall be brought exclusively "
+            "in the state or federal courts located in Travis County, Texas. "
+            "For purposes of this Agreement, direct damages shall include without limitation "
+            "production interruption losses, loss of throughput, scrap costs, and rework costs "
+            "arising from the other party's breach."
         ),
     },
 }
