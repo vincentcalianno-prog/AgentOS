@@ -29,6 +29,7 @@ Outputs produced (all in <out-dir>/):
     lrs_v1_metadata.json         — LRS metadata sidecar
     audit_log.json               — all audit events from all agents
     run_manifest.json            — run metadata (patterns, timestamps, test count)
+    gate_feedback_log.json       — Gate 1/2 ReviewFeedbackCapture summary
 """
 
 from __future__ import annotations
@@ -53,6 +54,7 @@ from acp.layer_b.agents.redline_analysis import (
     RedlineAnalyzer,
     resolve_confidence_tier,
 )
+from acp.layer_b.agents.review_feedback_capture import ReviewFeedbackCapture
 from acp.layer_b.agents.state_manager import StateManager
 from acp.layer_b.agents.structural_diff import Clause, StructuralDiff
 from acp.layer_b.agents.workflow_orchestrator import WorkflowOrchestratorAgent
@@ -68,6 +70,7 @@ from acp.layer_b.core.types import (
     TenantContext,
 )
 from acp.layer_b.loaders.pilot_entry_loader import PilotEntryLoader
+from acp.schemas.playbook_schemas import PlaybookEntry, ReviewerReaction
 from acp.layer_b.tests.fixtures.synthetic_config import SYNTHETIC_CONFIG
 
 _pilot_loader = PilotEntryLoader()
@@ -541,6 +544,85 @@ def run_pipeline(
     (out_dir / "run_manifest.json").write_text(json.dumps(manifest, indent=2))
     print(f"      Written: run_manifest.json")
 
+    # -----------------------------------------------------------------------
+    # Step 5.5: Simulate Gate 1 and Gate 2 feedback capture
+    # -----------------------------------------------------------------------
+    print("[5.5/7] Simulating Gate 1 / Gate 2 feedback capture...")
+    rfc = ReviewFeedbackCapture(audit_log=audit)
+
+    analysis_data = json.loads((out_dir / "redline_analysis.json").read_bytes())
+    recs = analysis_data.get("recommendations", [])
+
+    gate_log: dict = {
+        "total_reviews": 0,
+        "by_reaction": {"accepted": 0, "edited": 0, "rejected": 0},
+        "by_role": {"owner": 0, "legal": 0},
+        "edited_clause_references": [],
+    }
+
+    for rec_dict in recs:
+        clause_ref = rec_dict["clause_reference"]
+        recommendation = rec_dict.get("recommendation", "")
+        playbook_grounded = rec_dict.get("playbook_grounded", False)
+        playbook_reference = rec_dict.get("playbook_reference")
+
+        entry = PlaybookEntry(
+            id=playbook_reference or clause_ref,
+            recommendation_reviews=[],
+        )
+
+        # Gate 1 — owner review (all clauses)
+        if playbook_grounded:
+            entry = rfc.capture_owner_feedback(
+                entry=entry,
+                clause_reference=clause_ref,
+                reviewer_name="dry-run-owner",
+                original_recommendation=recommendation,
+                reaction=ReviewerReaction.ACCEPTED,
+                rationale="Dry-run: owner accepted agent recommendation",
+            )
+            gate_log["by_reaction"]["accepted"] += 1
+        else:
+            entry = rfc.capture_owner_feedback(
+                entry=entry,
+                clause_reference=clause_ref,
+                reviewer_name="dry-run-owner",
+                original_recommendation=recommendation,
+                reaction=ReviewerReaction.EDITED,
+                revised_disposition="negotiate",
+                rationale=(
+                    "Dry-run: owner flagged agent-reasoned item for legal review"
+                ),
+            )
+            gate_log["by_reaction"]["edited"] += 1
+            gate_log["edited_clause_references"].append(clause_ref)
+        gate_log["by_role"]["owner"] += 1
+        gate_log["total_reviews"] += 1
+
+        # Gate 2 — legal review (pilot-matched clauses only)
+        if playbook_grounded:
+            entry = rfc.capture_legal_feedback(  # noqa: F841  — returned entry not persisted in harness
+                entry=entry,
+                clause_reference=clause_ref,
+                reviewer_name="dry-run-legal",
+                agent_drafted_language="Stub counter-proposal language",
+                reaction=ReviewerReaction.ACCEPTED,
+                rationale=(
+                    "Dry-run: legal accepted playbook-grounded counter-language"
+                ),
+            )
+            gate_log["by_reaction"]["accepted"] += 1
+            gate_log["by_role"]["legal"] += 1
+            gate_log["total_reviews"] += 1
+
+    (out_dir / "gate_feedback_log.json").write_text(json.dumps(gate_log, indent=2))
+    print(
+        f"      Written: gate_feedback_log.json  "
+        f"(owner={gate_log['by_role']['owner']}, "
+        f"legal={gate_log['by_role']['legal']}, "
+        f"total={gate_log['total_reviews']})"
+    )
+
     return manifest
 
 
@@ -555,6 +637,7 @@ _EXPECTED_ARTIFACTS = [
     "counter_proposals.json",
     "audit_log.json",
     "run_manifest.json",
+    "gate_feedback_log.json",
 ]
 
 
