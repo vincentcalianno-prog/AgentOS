@@ -47,7 +47,12 @@ sys.path.insert(0, str(_REPO_ROOT))
 from acp.layer_b.agents.counter_proposal import CounterProposalAgent
 from acp.layer_b.agents.lrs_generator import LRSGeneratorAgent, LRSInput, LRSOutput
 from acp.layer_b.agents.portfolio_aggregator import PortfolioAggregatorAgent
-from acp.layer_b.agents.redline_analysis import ClauseRecommendation, RedlineAnalyzer
+from acp.layer_b.agents.redline_analysis import (
+    ClauseRecommendation,
+    LrsConfidenceTier,
+    RedlineAnalyzer,
+    resolve_confidence_tier,
+)
 from acp.layer_b.agents.state_manager import StateManager
 from acp.layer_b.agents.structural_diff import Clause, StructuralDiff
 from acp.layer_b.agents.workflow_orchestrator import WorkflowOrchestratorAgent
@@ -288,6 +293,30 @@ def _stub_render_lrs(lrs_input: LRSInput) -> LRSOutput:
     lines += ["", "## Analysis Summary"]
     recs = lrs_input.analysis.get("recommendations", [])
     for r in recs:
+        # Reconstruct a minimal ClauseRecommendation for confidence tier resolution.
+        # The dict is the asdict() serialisation produced by RedlineAnalyzer, so all
+        # fields are present.
+        _rec = ClauseRecommendation(
+            clause_reference=r["clause_reference"],
+            recommendation=r["recommendation"],
+            reasoning=r.get("reasoning", ""),
+            playbook_reference=r.get("playbook_reference"),
+            confidence=r.get("confidence", "low"),
+            requires_legal_review=r.get("requires_legal_review", False),
+            is_signature_blocker=r.get("is_signature_blocker", False),
+            playbook_grounded=r.get("playbook_grounded", False),
+            evidence_source=r.get("evidence_source"),
+        )
+        tier = resolve_confidence_tier(_rec)
+        if tier == LrsConfidenceTier.PLAYBOOK_VERIFIED:
+            lines.append(f"✓ Playbook — Verified")
+            lines.append(f"(source: {_rec.evidence_source})")
+        elif tier == LrsConfidenceTier.PLAYBOOK_PROVISIONAL:
+            lines.append(f"⚠ Playbook — Provisional")
+            lines.append(f"(source: {_rec.evidence_source})")
+        else:  # AGENT_REASONED
+            lines.append("✗ No playbook entry — Agent-reasoned")
+            lines.append("Draft below requires legal review before use.")
         blocker = " ⚠ SIGNATURE BLOCKER" if r.get("is_signature_blocker") else ""
         lines.append(f"- **{r['clause_reference']}**: {r['recommendation']}{blocker}")
 
