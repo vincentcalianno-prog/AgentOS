@@ -1,0 +1,109 @@
+id: mepa.delivery.risk_of_loss
+contract_type_id: mepa
+category_id: delivery
+sub_clause_id: risk_of_loss
+
+defend_baseline:
+  template_ref:
+    document_id: antora_mepa_template
+    section_id: "§2.4"
+    version: "v1.0"
+  guidance: >
+    Title and risk of loss transfer together to Antora at the point
+    of DDP delivery to the project site per Incoterms 2020. Supplier
+    retains both title and risk until delivery is complete at the
+    named destination. No split transfer constructs are acceptable.
+
+negotiability: non-negotiable
+
+evidence_tier: provisional
+review_status: draft
+
+accept_modifications:
+  - id: risk_of_loss.accept.delivery_confirmation_procedure
+    description: >
+      Supplier requests a defined delivery confirmation procedure
+      (e.g., signed delivery receipt, written acknowledgment).
+      Acceptable provided it does not alter the transfer point or
+      create conditions precedent to title transfer.
+    example_language: >
+      Title and risk of loss shall transfer upon Buyer's written
+      acknowledgment of delivery at the named destination.
+    rationale: >
+      Procedural confirmation of delivery is operationally reasonable
+      and does not change the risk transfer point. Acceptable.
+
+reject_thresholds:
+  - id: risk_of_loss.reject.split_transfer
+    description: >
+      Supplier proposes title transferring at shipment or port of
+      origin while risk transfers later, or any construct that
+      separates title transfer from risk transfer.
+    example_language: >
+      "Title shall pass upon shipment" or "Title passes FOB [origin];
+      risk passes upon delivery"
+    rationale: >
+      Split transfer creates an ownership gap — Antora holds title
+      to equipment in transit that it does not yet control and
+      cannot insure as owner. Reject any separation of title and
+      risk transfer.
+
+  - id: risk_of_loss.reject.pre_delivery_risk_transfer
+    description: >
+      Supplier proposes any Incoterm or construct that transfers
+      risk to Antora before arrival at the project site.
+    example_language: >
+      "Risk passes FCA [named place]" or "Risk transfers upon
+      loading at supplier facility"
+    rationale: >
+      Consistent with DDP baseline. Risk must not transfer before
+      delivery at the named destination. Reject any pre-site
+      risk transfer regardless of framing.
+
+antora_response:
+  rejection_response:
+    rationale: >
+      Antora's position is that title and risk of loss transfer
+      together at DDP delivery to the project site. Any construct
+      that separates title from risk, or transfers either before
+      site delivery, creates unacceptable exposure on capital
+      equipment with critical path schedule implications.
+    counter_proposal: >
+      Title to and risk of loss of the Equipment shall transfer
+      to Buyer simultaneously upon DDP delivery to [project site
+      address] per Incoterms 2020. Seller retains both title and
+      risk until delivery is complete at the named destination.
+  compromise_response:
+    conditions: >
+      No compromise on the transfer point itself. The only
+      acceptable variation is a procedural delivery confirmation
+      mechanism (signed receipt, written acknowledgment) that
+      does not create a condition precedent to transfer or alter
+      the Incoterms 2020 DDP transfer point.
+    revised_language: >
+      Title to and risk of loss of the Equipment shall transfer
+      to Buyer upon DDP delivery to [project site address] per
+      Incoterms 2020, evidenced by a signed delivery receipt.
+  acceptance_response:
+    rationale: >
+      Supplier's proposed language transfers title and risk
+      simultaneously at DDP delivery to the project site with
+      no split construct and no pre-site transfer. Antora's
+      baseline position is preserved.
+
+constraints: {}
+
+pending_items:
+  - "Confirm template section reference for risk of loss clause
+     (§2.4 assumed — verify against antora_mepa_template v1.0)"
+  - "First executed MEPA with risk_of_loss clause upgrades
+     evidence_tier to Tier 1"
+
+related_entries:
+  - mepa.delivery.ddp_terms
+  - mepa.delivery.inspection_acceptance
+
+examples:
+  - "Pratt Project (PRA1-XFMR-002): DDP Pratt KS confirmed in
+     PO — title and risk transfer at site delivery. Consistent
+     with this entry."
