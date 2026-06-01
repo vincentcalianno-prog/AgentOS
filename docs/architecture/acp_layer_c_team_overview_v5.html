@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>How AI-assisted contract review works · v5</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#f4f1ea; --ink:#211d18; --body:#36322b; --muted:#8b8275; --hair:#e0d9cc; --card:#fffdf9;
+    --sup:#6b6358; --sup-bg:#f1efe9; --sup-bd:#ddd6ca; --sup-hd:#ece8e1;
+    --leg:#534ab7; --leg-bg:#f2f0fa; --leg-bd:#d4cef0; --leg-hd:#ebe9f8;
+    --scm:#0f6e56; --scm-bg:#edf5f1; --scm-bd:#c5e1d6; --scm-hd:#e4f1eb;
+    --cla:#185fa5; --cla-bg:#eef4fb; --cla-bd:#c8dcf0; --cla-hd:#e6eef8;
+    --gate:#b5651d; --gatedot:#cf4a2e; --gate-bg:#fcf7ec; --gate-bd:#ecd9b0;
+    --future:#b06d1f; --future-bg:#fbf1dc; --future-bd:#ecd4a6;
+    --save:#1a6e1a; --save-bg:#e7f4e7; --save-bd:#bfe0bf;
+    --agent:#8a6d1f; --agent-bg:#faf3df; --agent-bd:#e7d9ac;
+    --serif:'Lora',Georgia,serif; --sans:'Inter',system-ui,sans-serif; --mono:'IBM Plex Mono',ui-monospace,monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--body);font-family:var(--sans);font-size:14px;line-height:1.55;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:1240px;margin:0 auto;padding:56px 30px 90px}
+  .eyebrow{font-size:11px;font-weight:600;letter-spacing:.13em;text-transform:uppercase;color:var(--muted);margin:0 0 14px}
+  h1{font-family:var(--serif);font-weight:700;font-size:42px;line-height:1.1;letter-spacing:-.01em;color:var(--ink);margin:0 0 16px}
+  h2{font-family:var(--serif);font-weight:600;font-size:28px;line-height:1.18;color:var(--ink);margin:0 0 12px;letter-spacing:-.01em}
+  h3{font-family:var(--serif);font-weight:600;font-size:22px;color:var(--ink);margin:0 0 10px}
+  .intro{font-size:16px;color:var(--body);max-width:760px;margin:0 0 30px}
+  code{font-family:var(--mono);font-size:.84em;background:#ece8df;border-radius:4px;padding:1px 5px}
+  .rule{border:none;border-top:1px solid var(--hair);margin:48px 0}
+  /* stat cards */
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:30px}
+  @media(max-width:820px){.stats{grid-template-columns:repeat(2,1fr)}}
+  .stat{background:var(--card);border:1px solid var(--hair);border-radius:14px;padding:20px 22px}
+  .stat.hi{background:#eaf6ea;border:1.5px solid #9fcf9f}
+  .stat .big{font-family:var(--serif);font-weight:700;font-size:30px;line-height:1.1;color:var(--ink)}
+  .stat.hi .big{color:var(--save)}
+  .stat .lab{font-weight:600;font-size:13px;margin-top:8px;color:var(--ink)}
+  .stat.hi .lab{color:#1c5e1c}
+  .stat .sub{font-size:12px;color:var(--muted);margin-top:4px;line-height:1.5}
+  .stat.hi .sub{color:#3a6b3a}
+  /* legend */
+  .legend{display:flex;flex-wrap:wrap;align-items:center;gap:8px 10px;margin-bottom:26px}
+  .legend .lt{font-size:11px;font-weight:600;letter-spacing:.13em;text-transform:uppercase;color:var(--muted);margin-right:4px}
+  .pill{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:500;padding:4px 11px;border-radius:20px;border:1px solid var(--hair);background:#fff}
+  .pill .d{width:8px;height:8px;border-radius:50%}
+  .pill.gate{border-color:var(--gate-bd);color:var(--gate)}
+  .pill.future{border:1px dashed var(--future-bd);color:var(--future)}
+  /* swimlane */
+  .lane-wrap{overflow-x:auto}
+  .lane-grid{min-width:1000px}
+  .srow{display:grid;grid-template-columns:66px 1fr 1fr 1fr 1fr;border-bottom:1px dashed #d8d1c4}
+  .rail{display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:18px 4px;gap:6px}
+  .circ{width:32px;height:32px;border-radius:50%;border:1.5px solid #c7bfb0;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:13px;color:var(--ink);background:#fff}
+  .circ.cla{border-color:var(--cla);color:var(--cla)} .circ.scm{border-color:var(--scm);color:var(--scm)}
+  .circ.leg{border-color:var(--leg);color:var(--leg)}
+  .circ.gate{border-color:var(--gatedot);background:#fff;position:relative}
+  .circ.gate::after{content:"";width:13px;height:13px;border-radius:50%;background:var(--gatedot);box-shadow:0 0 0 3px #f6ddd3}
+  .circ.loop{border-color:var(--gate);color:var(--gate);font-size:15px}
+  .circ.out{border-color:var(--leg);color:var(--leg)}
+  .rlab{font-size:9.5px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);text-align:center}
+  .cell{padding:14px 9px}
+  .cell.sup{background:var(--sup-bg)} .cell.leg{background:var(--leg-bg)} .cell.scm{background:var(--scm-bg)} .cell.cla{background:var(--cla-bg)}
+  /* lane header */
+  .lanehead{display:grid;grid-template-columns:66px 1fr 1fr 1fr 1fr;margin-bottom:0}
+  .lh{padding:11px 12px;border-radius:9px 9px 0 0;text-align:center;font-size:11.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin:0 4px}
+  .lh.sup{background:var(--sup-hd);color:var(--sup)} .lh.leg{background:var(--leg-hd);color:var(--leg)}
+  .lh.scm{background:var(--scm-hd);color:var(--scm)} .lh.cla{background:var(--cla-hd);color:var(--cla)}
+  /* step card */
+  .scard{border-radius:11px;padding:13px 15px;background:#fffdf9;border:1px solid var(--hair);height:100%}
+  .scard.sup{border-color:var(--sup-bd);background:#faf8f3}
+  .scard.leg{border-color:var(--leg-bd);background:#faf9fe}
+  .scard.scm{border-color:var(--scm-bd);background:#f6fbf8}
+  .scard.cla{border-color:var(--cla-bd);background:#f7fafe}
+  .scard.hi{border:1.5px solid var(--cla);box-shadow:0 1px 4px rgba(24,95,165,.12)}
+  .ceye{font-size:10px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;display:flex;align-items:center;gap:5px;margin-bottom:6px}
+  .ceye.sup{color:var(--sup)} .ceye.leg{color:var(--leg)} .ceye.scm{color:var(--scm)} .ceye.cla{color:var(--cla)}
+  .ceye.gate{color:var(--gate)} .ceye.gate .rd{width:9px;height:9px;border-radius:50%;background:var(--gatedot)}
+  .ctitle{font-weight:700;font-size:14.5px;color:var(--ink);line-height:1.3;margin-bottom:6px}
+  .cdesc{font-size:12.5px;color:var(--body);line-height:1.55}
+  .cdesc.faded{color:var(--muted)}
+  .star{color:#c0392b;font-size:10px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;margin-bottom:4px}
+  .mini{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;padding:3px 9px;border-radius:7px;margin:9px 6px 2px 0}
+  .mini.save{color:var(--save);background:var(--save-bg);border:1px solid var(--save-bd)}
+  .mini.agent{color:var(--agent);background:var(--agent-bg);border:1px solid var(--agent-bd);font-family:var(--sans)}
+  ul.cb{list-style:none;margin:10px 0 0;padding:0}
+  ul.cb li{font-size:12px;color:var(--body);line-height:1.5;padding:3px 0 3px 14px;position:relative}
+  ul.cb li::before{content:"·";position:absolute;left:2px;color:var(--muted);font-weight:700}
+  ul.cb li.ok::before{content:"✓";color:var(--scm);font-size:10px;left:0}
+  ul.cb li.warn::before{content:"⚠";color:var(--gate);font-size:10px;left:0}
+  ul.cb li.no::before{content:"✗";color:#b5482f;font-size:10px;left:0}
+  ul.cb li.strong{font-weight:700;color:var(--ink)}
+  ul.cb li b{color:var(--ink)}
+  .ag{font-weight:700;color:var(--ink)}
+  /* nested boxes inside cards */
+  .nbox{border-radius:9px;padding:10px 12px;margin-top:11px;font-size:11.5px;line-height:1.5}
+  .nbox .nh{font-weight:700;font-size:11.5px;display:flex;align-items:center;gap:5px;margin-bottom:4px}
+  .nbox.fb{background:var(--save-bg);border:1px solid var(--save-bd)} .nbox.fb .nh{color:var(--save)} .nbox.fb{color:#2f5a2f}
+  .nbox.future{background:var(--future-bg);border:1px solid var(--future-bd);color:var(--future)} .nbox.future .nh{color:var(--future)}
+  .nbox.lrs{background:#e9f5e9;border:1px solid #abd5ab}
+  .nbox.lrs .big{font-family:var(--serif);font-weight:700;font-size:19px;color:var(--save)}
+  .nbox.lrs .ln{font-weight:700;color:#1c5e1c;font-size:12px;margin-top:4px}
+  .nbox.lrs .sd{color:#3a6b3a;font-size:11px;margin-top:3px}
+  .nbox.loop{background:#eaf2fb;border:1px solid #c2d8f0} .nbox.loop .nh{color:var(--cla)} .nbox.loop{color:#214e7e}
+  .nbox.loop b{color:var(--cla)}
+  /* full-width bands */
+  .band{display:grid;grid-template-columns:66px 1fr;border-bottom:1px dashed #d8d1c4}
+  .band .bcontent{padding:16px 16px}
+  .band.repeat .bcontent{background:var(--gate-bg);border-top:2px solid var(--gate-bd);border-bottom:2px solid var(--gate-bd)}
+  .band.repeat .bh{font-weight:700;color:var(--gate);display:flex;align-items:center;gap:7px;font-size:14px;margin-bottom:4px}
+  .band.repeat p{margin:0;font-size:12.5px;color:#6e5a36;line-height:1.55}
+  .band.out .bcontent{background:var(--leg-bg);border-top:1px solid var(--leg-bd)}
+  .outcols{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+  @media(max-width:820px){.outcols{grid-template-columns:1fr}}
+  .outcols .oh{font-weight:700;color:var(--leg);font-size:13px;display:flex;align-items:center;gap:6px;margin-bottom:4px}
+  .outcols p{margin:0;font-size:12px;color:var(--body);line-height:1.55}
+  /* savings table */
+  .savings{background:#eaf6ea;border:1.5px solid #9fcf9f;border-radius:16px;padding:26px 28px;margin:8px 0}
+  .savings h3{color:var(--save);margin-bottom:14px}
+  table{width:100%;border-collapse:collapse;font-size:12.5px}
+  th{text-align:left;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#3a6b3a;padding:6px 10px;border-bottom:1.5px solid #abd5ab}
+  td{padding:11px 10px;border-bottom:1px solid #cbe5cb;color:#2f4a2f;vertical-align:top;line-height:1.45}
+  td.ts{font-family:var(--serif);font-weight:700;color:var(--save);white-space:nowrap;text-align:right}
+  th.r{text-align:right}
+  tr.total td{border-bottom:none;font-weight:700;color:#1c5e1c;padding-top:14px}
+  tr.total .ts{font-size:17px}
+  .savings .fn{font-size:11.5px;color:#3a6b3a;margin:14px 0 0;line-height:1.5}
+  td b{color:#1c5e1c}
+  /* pyramid */
+  .pyr{display:flex;flex-direction:column;align-items:center;gap:6px;margin:22px 0}
+  .plvl{border-radius:9px;color:#fff;width:100%;display:grid;gap:1px;overflow:hidden}
+  .plvl .pc{padding:11px 14px;text-align:center}
+  .plvl .pt{font-weight:700;font-size:13px;display:flex;gap:6px;align-items:center;justify-content:center}
+  .plvl .ps{font-size:11px;opacity:.92;margin-top:2px;line-height:1.4}
+  .l1{background:#3b2f86;width:34%} .l2{background:#1f5fa3;width:58%;grid-template-columns:repeat(3,1fr)}
+  .l3{background:#15694f;width:80%;grid-template-columns:repeat(4,1fr)} .l4{background:#8a560f;width:92%;grid-template-columns:repeat(4,1fr)}
+  .l5{background:#4a443c;width:100%;grid-template-columns:repeat(5,1fr)}
+  .plvl .pc + .pc{border-left:1px solid rgba(255,255,255,.18)}
+  /* how to read */
+  .htr{background:var(--card);border:1px solid var(--hair);border-radius:14px;padding:20px 24px;margin-top:8px}
+  .htr .hh{font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:12px}
+  .htr .ln{display:flex;gap:10px;margin:9px 0;font-size:13px;line-height:1.5}
+  .sw{width:13px;height:13px;border-radius:3px;flex:0 0 auto;margin-top:3px}
+  .htr b{color:var(--ink)}
+  /* confidence tiers */
+  .ctbox{background:var(--card);border:1px solid var(--hair);border-radius:16px;padding:26px 28px;margin:8px 0}
+  .cttiers{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:16px}
+  @media(max-width:820px){.cttiers{grid-template-columns:1fr}}
+  .ct{border-radius:11px;padding:15px 17px}
+  .ct.ver{background:#e9f5ec;border:1px solid #b6dcc1} .ct.prov{background:#fcf3e0;border:1px solid #ecd6a8} .ct.agent{background:#fbeceb;border:1px solid #eac6c0}
+  .ct .cg{font-size:18px;margin-bottom:8px}
+  .ct .ch{font-weight:700;font-size:13.5px;margin-bottom:6px}
+  .ct.ver .ch{color:var(--scm)} .ct.prov .ch{color:var(--gate)} .ct.agent .ch{color:#b5482f}
+  .ct .cd{font-size:12px;color:var(--body);line-height:1.55}
+  .ct .cd b{color:var(--ink)}
+  /* who does what */
+  .who{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:14px}
+  @media(max-width:820px){.who{grid-template-columns:1fr}}
+  .wc{border-radius:14px;padding:18px 20px}
+  .wc.cla{background:var(--cla-bg);border:1px solid var(--cla-bd)} .wc.scm{background:var(--scm-bg);border:1px solid var(--scm-bd)} .wc.leg{background:var(--leg-bg);border:1px solid var(--leg-bd)}
+  .wc .wh{font-weight:700;font-size:13.5px;display:flex;align-items:center;gap:7px;margin-bottom:10px}
+  .wc.cla .wh{color:var(--cla)} .wc.scm .wh{color:var(--scm)} .wc.leg .wh{color:var(--leg)}
+  .wc .wl{font-size:12.5px;color:var(--body);line-height:1.5;padding:4px 0 4px 16px;position:relative}
+  .wc .wl::before{content:"→";position:absolute;left:0;color:var(--muted)}
+  footer{display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-top:54px;padding-top:18px;border-top:1px solid var(--hair);font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <p class="eyebrow">Antora Energy · Supply Chain · ACP Overview · Draft v5</p>
+  <h1>How AI-assisted contract review works</h1>
+  <p class="intro">A full walkthrough of the contract negotiation lifecycle — what Claude handles automatically, where the supply chain and legal teams stay in control, and where automation can expand in future phases.</p>
+
+  <div class="stats">
+    <div class="stat hi"><div class="big">3–4 hrs → 30 min</div><div class="lab">First-round redline review — SCM team validated</div><div class="sub">Claude reads the doc, classifies every change, assigns confidence tiers, and delivers a structured Legal Reference Sheet ready for review</div></div>
+    <div class="stat"><div class="big">~6–8 hrs</div><div class="lab">Total time saved per negotiation round</div><div class="sub">Across all automated steps</div></div>
+    <div class="stat"><div class="big">2–4×</div><div class="lab">Typical negotiation rounds</div><div class="sub">Savings compound each round</div></div>
+    <div class="stat"><div class="big">100%</div><div class="lab">Human approval before supplier contact</div><div class="sub">Claude drafts, humans send</div></div>
+  </div>
+
+  <div class="legend">
+    <span class="lt">Lanes</span>
+    <span class="pill"><span class="d" style="background:var(--sup)"></span>Supplier</span>
+    <span class="pill"><span class="d" style="background:var(--leg)"></span>Legal team</span>
+    <span class="pill"><span class="d" style="background:var(--scm)"></span>Supply chain (SCM)</span>
+    <span class="pill"><span class="d" style="background:var(--cla)"></span>Claude — automatic</span>
+    <span class="pill gate">● Human review gate</span>
+    <span class="pill future">— Future automation</span>
+    <span class="pill"><span class="d" style="background:var(--save)"></span>Time saved</span>
+  </div>
+
+  <!-- ============ SWIMLANE ============ -->
+  <div class="lane-wrap">
+  <div class="lane-grid">
+
+    <div class="lanehead">
+      <div></div>
+      <div class="lh sup">Supplier</div>
+      <div class="lh leg">Legal team</div>
+      <div class="lh scm">Supply chain</div>
+      <div class="lh cla">Claude — automated</div>
+    </div>
+
+    <!-- STEP 1 -->
+    <div class="srow">
+      <div class="rail"><div class="circ">1</div><div class="rlab">Start</div></div>
+      <div class="cell sup"><div class="scard sup"><div class="ceye sup">📄 Supplier</div><div class="ctitle">Provides credentials</div><div class="cdesc">Supplier provides entity information, compliance documents, and certifications needed for contract creation.</div><ul class="cb"><li>Entity name, jurisdiction, tax ID</li><li>Insurance certificates</li><li>BAA / IRA / compliance declarations if applicable</li></ul></div></div>
+      <div class="cell leg"><div class="scard leg"><div class="ceye leg">🏛 Legal</div><div class="ctitle">Drafts and sends Antora template</div><div class="cdesc">Legal uses supplier credentials to populate the correct agreement type and sends it to the supplier for review.</div><ul class="cb"><li>Selects MPA, MEPA, NDA, MSA, or PO type</li><li>Applies project-specific overlays (e.g. Pratt terms)</li></ul></div></div>
+      <div class="cell scm"></div>
+      <div class="cell cla"></div>
+    </div>
+
+    <!-- STEP 2 -->
+    <div class="srow">
+      <div class="rail"><div class="circ">2</div><div class="rlab">Input</div></div>
+      <div class="cell sup"><div class="scard sup"><div class="ceye sup">📨 Supplier</div><div class="ctitle">Returns redlined contract</div><div class="cdesc">Supplier reviews Antora's template, makes changes, and emails the redlined Word document back to Antora's procurement inbox — triggering the automated pipeline.</div></div></div>
+      <div class="cell leg"></div>
+      <div class="cell scm"></div>
+      <div class="cell cla"><div class="scard cla"><div class="ceye cla">🤖 Claude — automatic</div><div class="ctitle">Detects and reads document</div><div class="cdesc">Claude detects the incoming redlined attachment, reads it, and maps every change to the corresponding clause in Antora's template.</div><span class="mini save">⏱ ~45 min saved</span><span class="mini agent">Agent 1 — Email Watcher · Agent 2 — Document Extraction</span><ul class="cb"><li><span class="ag">Agent 1</span> — monitors inbox and detects redlined attachments automatically</li><li><span class="ag">Agent 2</span> — extracts and structures document content clause by clause</li><li><span class="ag">Agent 4</span> — maps each change to the standard template structure</li></ul></div></div>
+    </div>
+
+    <!-- STEP 3 -->
+    <div class="srow">
+      <div class="rail"><div class="circ cla">3</div><div class="rlab">Classify</div></div>
+      <div class="cell sup"></div><div class="cell leg"></div><div class="cell scm"></div>
+      <div class="cell cla"><div class="scard cla"><div class="ceye cla">🤖 Claude — automatic</div><div class="ctitle">Classifies each change against the playbook</div><div class="cdesc">For every supplier redline, Claude looks up Antora's established position and assigns a disposition: Accept, Counter, or Reject.</div><span class="mini save">⏱ ~1–2 hrs saved</span><span class="mini agent">Agent 5 — Clause Analyzer</span><ul class="cb"><li><span class="ag">Agent 5</span> — looks up each clause in the playbook and applies counterparty, project, and commodity overlays</li><li class="ok"><b>Accept</b> — supplier's language is acceptable</li><li class="warn"><b>Counter</b> — Antora has a compromise position</li><li class="no"><b>Reject</b> — firm line; original language restored</li></ul></div></div>
+    </div>
+
+    <!-- STEP 4 -->
+    <div class="srow">
+      <div class="rail"><div class="circ cla">4</div><div class="rlab">Confidence</div></div>
+      <div class="cell sup"></div><div class="cell leg"></div><div class="cell scm"></div>
+      <div class="cell cla"><div class="scard cla"><div class="ceye cla">🤖 Claude — automatic</div><div class="ctitle">Assigns confidence tier to every recommendation</div><div class="cdesc">Each recommendation is tagged with its evidence source so the team knows exactly how grounded the position is and how much scrutiny to apply.</div><span class="mini save">⏱ ~30 min saved</span><span class="mini agent">Agent 5 — Clause Analyzer</span><ul class="cb"><li class="ok"><b>Playbook — Verified:</b> drawn from a signed agreement</li><li class="warn"><b>Playbook — Provisional:</b> legal-calibrated, not yet in a signed deal</li><li class="no"><b>Agent-reasoned:</b> no playbook entry — legal review required</li></ul></div></div>
+    </div>
+
+    <!-- STEP 5 -->
+    <div class="srow">
+      <div class="rail"><div class="circ cla">5</div><div class="rlab">LRS</div></div>
+      <div class="cell sup"></div><div class="cell leg"></div><div class="cell scm"></div>
+      <div class="cell cla"><div class="scard cla hi"><div class="ceye cla">🤖 Claude — automatic</div><div class="star">★ Highest impact step</div><div class="ctitle">Generates the Legal Reference Sheet (LRS)</div><div class="cdesc">Claude produces a complete clause-by-clause Legal Reference Sheet: every redline, its disposition, the confidence tier and evidence source, and the full counter-proposal language for every Counter and Reject item.</div>
+        <div class="nbox lrs"><div class="big">3–4 hrs → 30 min</div><div class="ln">· First-round redline review</div><div class="sd">SCM-validated: manual review of a supplier redline consolidated to 30-min LRS review</div></div>
+        <span class="mini agent" style="margin-top:11px">Agent 5 — Clause Analyzer · Agent 6 — Counter Proposer · Agent 7 — LRS Generator</span>
+        <ul class="cb"><li><span class="ag">Agent 5</span> — finalizes all clause dispositions</li><li><span class="ag">Agent 6</span> — now wired to the playbook: pilot-matched clauses get Antora's real counter-language; clauses with no entry are drafted and clearly marked agent-reasoned; restores Antora's verbatim language on signature-blocker Rejects</li><li><span class="ag">Agent 7</span> — formats the full LRS with confidence tiers, sources, and counter-language ready for review</li><li>Full audit trail logged automatically</li></ul></div></div>
+    </div>
+
+    <!-- STEP 6 — GATE 1 -->
+    <div class="srow">
+      <div class="rail"><div class="circ gate"></div><div class="rlab">Gate 1</div></div>
+      <div class="cell sup"></div><div class="cell leg"></div>
+      <div class="cell scm"><div class="scard" style="border:1.5px solid var(--gate-bd);background:var(--gate-bg)"><div class="ceye gate"><span class="rd"></span> SCM Review Gate</div><div class="ctitle">Supply chain reviews and approves the LRS</div><div class="cdesc">The SCM team reviews the full Legal Reference Sheet. Confirms every recommendation makes sense for this supplier, project, and equipment scope. Flags any commercial concerns to legal.</div><ul class="cb"><li>Review each disposition and confidence tier</li><li>Confirm project and supplier overlays are correctly applied</li><li>Flag agent-reasoned items that need legal priority attention</li><li class="strong">Nothing proceeds to legal until SCM approves</li></ul>
+        <div class="nbox fb"><div class="nh">📝 Feedback captured for agent learning</div>Every SCM disposition override and correction is logged as structured feedback — which clause, what SCM changed it to, and why. Agents learn from these corrections over time. Commercial context corrections (e.g. “this is a Pratt project — apply stricter delivery terms”) refine how overlays are applied in future rounds.</div></div></div>
+      <div class="cell cla"></div>
+    </div>
+
+    <!-- STEP 7 — GATE 2 -->
+    <div class="srow">
+      <div class="rail"><div class="circ gate"></div><div class="rlab">Gate 2</div></div>
+      <div class="cell sup"></div>
+      <div class="cell leg"><div class="scard leg" style="border:1.5px solid var(--leg-bd)"><div class="ceye gate" style="color:var(--leg)"><span class="rd"></span> Legal Review Gate</div><div class="ctitle">Legal reviews and approves counter-language</div><div class="cdesc">After SCM approval, legal reviews and approves every counter-proposal. Edits agent-reasoned drafts. Escalates items needing further discussion.</div><ul class="cb"><li>Approves, edits, or rejects each counter line</li><li>Agent-reasoned items get priority attention — these have no playbook backing</li><li>Legal edits feed back into the playbook as Tier 2 evidence for future negotiations</li><li class="strong">Sandelin approves all position changes — Claude never does</li></ul>
+        <div class="nbox fb"><div class="nh">📝 Feedback captured as Tier-2 playbook evidence</div>Every legal edit to counter-proposal language is captured as a <b>RecommendationReview</b> record — logging what the agent drafted, what legal changed it to, and the rationale. These become Tier-2 evidence that directly refines future recommendations for the same clause type. Accumulated edits surface as proposed playbook updates for Sandelin's approval.</div></div></div>
+      <div class="cell scm"></div><div class="cell cla"></div>
+    </div>
+
+    <!-- STEP 8 — REDLINE -->
+    <div class="srow">
+      <div class="rail"><div class="circ leg">8</div><div class="rlab">Redline</div></div>
+      <div class="cell sup"></div>
+      <div class="cell leg"><div class="scard leg"><div class="ceye leg">🏛 Legal — today</div><div class="ctitle">Produces updated Antora redlined document</div><div class="cdesc">Legal incorporates all approved counter-proposals into an updated contract with Antora's tracked changes, ready to return to the supplier.</div><ul class="cb"><li>Manual step today — legal produces the markup document</li></ul><div class="nbox future"><div class="nh">⚡ Future automation</div>Claude generates this document once the approval workflow is in place.</div></div></div>
+      <div class="cell scm"></div><div class="cell cla"></div>
+    </div>
+
+    <!-- STEP 9 — SEND -->
+    <div class="srow">
+      <div class="rail"><div class="circ scm">9</div><div class="rlab">Send</div></div>
+      <div class="cell sup"><div class="scard sup"><div class="ceye sup">📨 Supplier receives</div><div class="ctitle">Reviews Antora's counter-proposal</div><div class="cdesc faded">Supplier reviews and accepts, counters again, or requests a call. If they counter again, the loop repeats.</div></div></div>
+      <div class="cell leg"><div class="scard leg"><div class="ceye leg">🏛 Legal or SCM sends</div><div class="ctitle">Counter-proposal sent to supplier</div><div class="cdesc">Either legal or the supply chain team sends the approved redlined document back to the supplier. Always a human action today.</div><div class="nbox future"><div class="nh">⚡ Future automation</div>Once both SCM + legal approvals are confirmed in the system, this send step can be automated.</div></div></div>
+      <div class="cell scm"><div class="scard scm"><div class="ceye scm">👤 SCM — or sends directly</div><div class="ctitle">SCM may send depending on relationship</div><div class="cdesc">For established supplier relationships, SCM may send directly with legal cc'd.</div></div></div>
+      <div class="cell cla"></div>
+    </div>
+
+    <!-- REPEAT BAND -->
+    <div class="band repeat">
+      <div class="rail"><div class="circ loop">↻</div><div class="rlab">Repeat</div></div>
+      <div class="bcontent"><div class="bh">🔁 Negotiation loop — repeats until agreement is reached</div><p>If the supplier redlines again, the entire pipeline from Step 2 repeats — Claude re-reads the new version, re-classifies against the playbook, regenerates the LRS, and the team reviews again. Each round the <b>3–4 hrs → 30 min</b> savings applies. Typically 2–4 rounds total. Every round is tracked and logged in full.</p></div>
+    </div>
+
+    <!-- STEP 10 — LEARN -->
+    <div class="srow">
+      <div class="rail"><div class="circ cla">10</div><div class="rlab">Learn</div></div>
+      <div class="cell sup"></div>
+      <div class="cell leg"><div class="scard leg"><div class="ceye leg">🏛 Legal</div><div class="ctitle">Confirms agreement is complete</div><div class="cdesc">Legal confirms all terms are agreed and the agreement is ready for execution. Joint confirmation with SCM triggers automated outcome recording.</div></div></div>
+      <div class="cell scm"><div class="scard scm"><div class="ceye scm">👤 SCM</div><div class="ctitle">Commercial sign-off</div><div class="cdesc">SCM confirms all commercial terms are acceptable. Joint confirmation with legal triggers outcome recording below.</div></div></div>
+      <div class="cell cla"><div class="scard cla"><div class="ceye cla">🤖 Claude — automatic</div><div class="ctitle">Records outcome and updates learning</div><div class="cdesc">On joint confirmation, Claude logs the final negotiation outcome — the closed-loop signal that completes the learning record for this agreement.</div><span class="mini save">⏱ ~30–45 min saved</span><span class="mini agent">Agent 9 — Portfolio Aggregator</span><ul class="cb"><li><span class="ag">Agent 9</span> — logs final outcome: what was agreed, rounds to close, all concessions made</li><li>Combines with SCM feedback (Gate 1) and legal edits (Gate 2) to form the complete learning record</li><li>Flags playbook entries where Antora consistently compromises — proposed updates surfaced to Sandelin</li><li>Upgrades evidence tier on positions confirmed by this signed agreement (Tier 2 → Tier 1)</li><li class="strong">Playbook updates require Sandelin approval — never automatic</li></ul>
+        <div class="nbox loop"><div class="nh">🔁 Complete learning loop — three sources</div><b>Gate 1</b> → SCM disposition corrections (in-process, commercial context)<br><b>Gate 2</b> → Legal counter-language edits (in-process, Tier-2 playbook evidence)<br><b>Step 10</b> → Final outcome (closed-loop: what actually got agreed and why)<br><br>Together these three form a complete signal. Step 10 alone would miss the richest feedback.</div></div></div>
+    </div>
+
+    <!-- OUTPUT BAND -->
+    <div class="band out">
+      <div class="rail"><div class="circ out">✓</div><div class="rlab">Output</div></div>
+      <div class="bcontent"><div class="outcols">
+        <div><div class="oh">📄 Executed agreement</div><p>Fully negotiated contract, every position traceable to a playbook entry or legal decision.</p></div>
+        <div><div class="oh">📋 Complete audit trail</div><p>Every recommendation, approval, edit, and concession logged across all rounds.</p></div>
+        <div><div class="oh">📈 Stronger playbook</div><p>Positions confirmed by this agreement upgrade Tier 2 → Tier 1. Each deal makes the next negotiation faster and more grounded.</p></div>
+      </div></div>
+    </div>
+
+  </div>
+  </div>
+
+  <hr class="rule">
+
+  <!-- ============ SAVINGS TABLE ============ -->
+  <div class="savings">
+    <h3>Estimated time savings per negotiation round</h3>
+    <table>
+      <thead><tr><th>Step</th><th>Agent(s)</th><th>What was manual before</th><th class="r">Time saved</th></tr></thead>
+      <tbody>
+        <tr><td><b>Step 2</b> — Detect &amp; parse redlined doc</td><td>Agent 1 · Agent 2 · Agent 4</td><td>Opening email, downloading attachment, manually reading through the doc to find what changed</td><td class="ts">~45 min</td></tr>
+        <tr><td><b>Step 3</b> — Classify each change</td><td>Agent 5</td><td>Manually cross-referencing each redline against Antora's standard position, looking up prior agreements</td><td class="ts">~1–2 hrs</td></tr>
+        <tr><td><b>Step 4</b> — Confidence tier assignment</td><td>Agent 5</td><td>Manually assessing how grounded each position is, which agreements support it</td><td class="ts">~30 min</td></tr>
+        <tr><td><b>Step 5</b> — Legal Reference Sheet generation ★</td><td>Agent 5 · Agent 6 · Agent 7</td><td>Reading every redline in full, drafting counter-language, formatting the LRS — consolidates 3–4 hrs of manual redline review to a 30-min structured LRS review (SCM-validated)</td><td class="ts">3–4 hrs → 30 min</td></tr>
+        <tr><td><b>Step 10</b> — Outcome recording &amp; audit logging</td><td>Agent 9</td><td>Manually updating tracking sheets, logging concessions, filing the executed agreement, noting positions to revisit</td><td class="ts">~30–45 min</td></tr>
+        <tr class="total"><td>Total per negotiation round</td><td></td><td></td><td class="ts">~6–8 hrs</td></tr>
+      </tbody>
+    </table>
+    <p class="fn">★ Headline figure. For a 2–4 round negotiation, total savings compound to 12–32 hours per agreement. Figures are estimates based on SCM team input; actual savings vary by agreement complexity and supplier.</p>
+  </div>
+
+  <hr class="rule">
+
+  <!-- ============ PYRAMID ============ -->
+  <p class="eyebrow">How agreements are structured</p>
+  <h2>From agreement type to executed contract</h2>
+  <p class="intro">Read bottom to top: Antora starts with the agreement type, applies the playbook positions defined for that type, adjusts by context (supplier, project, commodity), makes clause-level decisions, and the result is an executed agreement.</p>
+
+  <div class="pyr">
+    <div class="plvl l1"><div class="pc"><div class="pt">Executed Agreement</div><div class="ps">Fully negotiated · signed by both parties</div></div></div>
+    <div class="plvl l2">
+      <div class="pc"><div class="pt">✓ Accept</div><div class="ps">Supplier's language is acceptable as-is</div></div>
+      <div class="pc"><div class="pt">⚠ Counter-Negotiate</div><div class="ps">Antora proposes revised language</div></div>
+      <div class="pc"><div class="pt">✗ Reject</div><div class="ps">Firm line — original language restored</div></div>
+    </div>
+    <div class="plvl l3">
+      <div class="pc"><div class="pt">Counterparty overlay</div><div class="ps">Supplier-specific tightening (e.g. MCM — stricter LoL)</div></div>
+      <div class="pc"><div class="pt">Project overlay</div><div class="ps">Project-specific requirements (e.g. Pratt — grid-critical)</div></div>
+      <div class="pc"><div class="pt">Commodity overlay</div><div class="ps">Equipment type (e.g. PDC / E-House → higher insurance)</div></div>
+      <div class="pc"><div class="pt">Confidence tier</div><div class="ps">Verified · Provisional · Agent-reasoned</div></div>
+    </div>
+    <div class="plvl l4">
+      <div class="pc"><div class="pt">Playbook positions</div><div class="ps">Established accept / counter / reject per clause</div></div>
+      <div class="pc"><div class="pt">Cross-clause dependencies</div><div class="ps">Clauses that must be consistent with each other</div></div>
+      <div class="pc"><div class="pt">Counter-proposal language</div><div class="ps">Pre-approved language for every response state</div></div>
+      <div class="pc"><div class="pt">Template version</div><div class="ps">Which Antora template was sent — MPA v1.2, MEPA v2.0, etc.</div></div>
+    </div>
+    <div class="plvl l5">
+      <div class="pc"><div class="pt">MPA</div><div class="ps">Master Purchase Agreement</div></div>
+      <div class="pc"><div class="pt">MEPA</div><div class="ps">Master Equipment Purchase Agreement</div></div>
+      <div class="pc"><div class="pt">NDA</div><div class="ps">Non-Disclosure Agreement</div></div>
+      <div class="pc"><div class="pt">MSA</div><div class="ps">Master Services Agreement</div></div>
+      <div class="pc"><div class="pt">PO / SOW</div><div class="ps">Purchase Order / Statement of Work</div></div>
+    </div>
+  </div>
+
+  <div class="htr">
+    <div class="hh">How to read this</div>
+    <div class="ln"><span class="sw" style="background:#3b2f86"></span><div><b>Level 1 — Executed agreement.</b> The outcome. Every layer below contributes to producing this.</div></div>
+    <div class="ln"><span class="sw" style="background:#1f5fa3"></span><div><b>Level 2 — Negotiation decisions.</b> The three clause-level outcomes Claude assigns and the team approves: Accept, Counter-Negotiate, Reject.</div></div>
+    <div class="ln"><span class="sw" style="background:#15694f"></span><div><b>Level 3 — Context shaping decisions.</b> The overlays and confidence signals that adjust how a position is applied. Same clause, different supplier or project = potentially different disposition.</div></div>
+    <div class="ln"><span class="sw" style="background:#8a560f"></span><div><b>Level 4 — Playbook positions.</b> The structured knowledge Claude looks up: established positions, cross-clause rules, pre-approved counter-language, and the template version in play.</div></div>
+    <div class="ln"><span class="sw" style="background:#4a443c"></span><div><b>Level 5 — Agreement types.</b> The foundation. Which contract type is being negotiated determines which playbook entries, overlays, and clauses are even in scope.</div></div>
+  </div>
+
+  <hr class="rule">
+
+  <!-- ============ CONFIDENCE TIERS ============ -->
+  <div class="ctbox">
+    <h3>Reading the confidence tier on every recommendation</h3>
+    <p style="margin:0;font-size:14px;color:var(--body)">Every clause recommendation in the Legal Reference Sheet is tagged with one of three confidence tiers — so the SCM and legal teams immediately know how much scrutiny to apply.</p>
+    <div class="cttiers">
+      <div class="ct ver"><div class="cg">✓</div><div class="ch">Playbook — Verified</div><div class="cd"><b>Source: a closed, signed agreement.</b> Antora has tested this position and it held. High confidence. The LRS cites the specific agreement (e.g. “MCM PO T&amp;Cs, May 6”). Counter-language is drawn directly from pre-approved text.</div></div>
+      <div class="ct prov"><div class="cg">⚠</div><div class="ch">Playbook — Provisional</div><div class="cd"><b>Source: legal team guidance.</b> Calibrated by Sandelin or outside counsel but not yet in a signed agreement. Real, considered positions — apply judgment before sending, especially on novel suppliers.</div></div>
+      <div class="ct agent"><div class="cg">✗</div><div class="ch">Agent-reasoned</div><div class="cd"><b>Source: Claude reasoning from general principles.</b> No formal Antora position yet. Claude drafts a starting point but flags it clearly. <b>Legal review required before use.</b> These become candidates for new playbook entries.</div></div>
+    </div>
+  </div>
+
+  <hr class="rule">
+
+  <!-- ============ WHO DOES WHAT ============ -->
+  <p class="eyebrow">Summary</p>
+  <h2>Who does what</h2>
+  <p class="intro">The goal is to eliminate low-value work — reading, comparing, formatting, logging — so the team focuses on judgment calls that require human expertise.</p>
+  <div class="who">
+    <div class="wc cla"><div class="wh">🤖 Claude handles automatically</div>
+      <div class="wl">Detects incoming redlines (Agent 1)</div>
+      <div class="wl">Reads and parses the document (Agent 2 + 4)</div>
+      <div class="wl">Classifies every clause against the playbook (Agent 5)</div>
+      <div class="wl">Applies context overlays (Agent 5)</div>
+      <div class="wl">Assigns confidence tiers (Agent 5)</div>
+      <div class="wl">Drafts counter-proposal language from the playbook (Agent 6)</div>
+      <div class="wl">Generates the full Legal Reference Sheet (Agent 7)</div>
+      <div class="wl">Logs the complete audit trail every round (Agent 9)</div>
+      <div class="wl">Records outcomes and flags playbook updates (Agent 9)</div>
+    </div>
+    <div class="wc scm"><div class="wh">👤 Supply chain decides</div>
+      <div class="wl">Reviews and approves the LRS (Gate 1)</div>
+      <div class="wl">Flags commercial concerns to legal</div>
+      <div class="wl">Confirms project context is correctly applied</div>
+      <div class="wl">Sends counter-proposal to supplier (today)</div>
+      <div class="wl">Commercial sign-off on close</div>
+    </div>
+    <div class="wc leg"><div class="wh">🏛 Legal decides</div>
+      <div class="wl">Drafts and sends initial template to supplier</div>
+      <div class="wl">Reviews and approves counter-language (Gate 2)</div>
+      <div class="wl">Edits agent-reasoned drafts before use</div>
+      <div class="wl">Produces updated Antora redlined document (today)</div>
+      <div class="wl">Approves all playbook position changes</div>
+      <div class="wl">Legal sign-off on close</div>
+      <div class="wl">Authors new playbook entries for novel clauses</div>
+    </div>
+  </div>
+
+  <footer>
+    <span>Vincent Calianno · Antora Energy</span>
+    <span>ACP Layer C — Team Overview · Draft v5</span>
+    <span>31 May 2026</span>
+  </footer>
+
+</div>
+</body>
+</html>

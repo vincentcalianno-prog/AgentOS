@@ -555,3 +555,15 @@ In Layer B code and tests: `"generic-agreement"` (never `"MEPA"` or `"MPA"`).
 - Files in `docs/architecture/pilot_entries/`
 - Any `.md` representing a contract template or position document
 - Any existing passing test
+
+---
+
+## HTML reference docs — reproduction protocol
+Two canonical HTML deliverables live in docs/architecture/:
+- acp_architecture_v5_2026-05-31.html  (Doc 1: layer map & schema model)
+- acp_layer_c_team_overview_v5.html    (Doc 2: team overview)
+RULE: to update either, OPEN the committed file and EDIT only the delta.
+Never rebuild from scratch — regeneration drifts the locked v4-derived
+layout. Full design tokens, structure outline, and per-version checklist
+are in master handoff Section 14. Doc 1 is technical; Doc 2 stays
+non-technical (no SHAs, no _PILOT_ANTORA_RESPONSES flag).
