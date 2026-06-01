@@ -239,13 +239,36 @@ class CounterProposalAgent:
         reasoning_from_analysis = rec.get("reasoning", "")
         original_text = rec.get("original_text", "")
         counterparty_text = rec.get("counterparty_text", "")
+        antora_response = rec.get("antora_response")  # dict or None after JSON round-trip
 
         # Auto-select restore_strategy: signature blockers with original text → verbatim restore
+        # Finding F — DO NOT REMOVE: this logic must survive antora_response wiring.
         if rec.get("is_signature_blocker", False) and original_text:
             restore_strategy = "verbatim"
         else:
             restore_strategy = "redraft"
 
+        # Playbook path: derive counter text directly from the antora_response block.
+        # Skips the LLM drafter when a matched PlaybookEntry supplied structured responses.
+        if antora_response is not None:
+            draft = self._draft_from_antora_response(
+                clause_ref, recommendation, original_text, counterparty_text,
+                antora_response, restore_strategy,
+            )
+            self._audit_write(
+                context, negotiation_id,
+                "clause_drafted",
+                {
+                    "clause_reference": clause_ref,
+                    "based_on_recommendation": recommendation,
+                    "tone": draft.tone,
+                    "requires_legal_review": draft.requires_legal_review,
+                    "source": "antora_response",
+                },
+            )
+            return draft
+
+        # No playbook entry — fall through to the injected drafter (LLM or stub).
         try:
             draft = self._draft_counter_proposal(
                 clause_ref,
@@ -285,6 +308,110 @@ class CounterProposalAgent:
                 playbook_reference=None,
                 requires_legal_review=True,
             )
+
+    def _draft_from_antora_response(
+        self,
+        clause_ref: str,
+        recommendation: str,
+        original_text: str,
+        counterparty_text: str,
+        antora_response: dict,
+        restore_strategy: str,
+    ) -> CounterProposalDraft:
+        """Derive a CounterProposalDraft from the playbook antora_response block.
+
+        Called when rec["antora_response"] is non-None (a PlaybookEntry was matched).
+        The injected LLM drafter is not invoked in this path.
+
+        reject + is_signature_blocker (restore_strategy="verbatim"):
+            Finding F preserved — verbatim restore of original_text as primary counter.
+            Appends rejection_response.counter_proposal as supplementary language.
+        reject (non-signature-blocker):
+            Uses rejection_response.counter_proposal + rationale.
+        negotiate:
+            Uses compromise_response.revised_language + conditions.
+        """
+        rejection = antora_response.get("rejection_response") or {}
+        compromise = antora_response.get("compromise_response") or {}
+
+        if recommendation == "reject":
+            counter_proposal_text = (rejection.get("counter_proposal") or "").strip()
+            rationale = (rejection.get("rationale") or "").strip()
+            if restore_strategy == "verbatim" and original_text:
+                # Finding F: verbatim restore is the primary counter.
+                # Append playbook counter_proposal as supplementary language if present.
+                counter_text = original_text
+                if counter_proposal_text:
+                    counter_text = (
+                        f"{original_text}\n\n"
+                        f"[Playbook counter-proposal: {counter_proposal_text}]"
+                    )
+                return CounterProposalDraft(
+                    clause_reference=clause_ref,
+                    based_on_recommendation=recommendation,
+                    original_text=original_text,
+                    counterparty_text=counterparty_text,
+                    counter_text=counter_text,
+                    reasoning=rationale or f"Verbatim restore of {clause_ref}; playbook rejection response applied.",
+                    tone="firm",
+                    playbook_reference=None,
+                    requires_legal_review=True,
+                )
+            # Non-signature-blocker reject: use rejection_response.counter_proposal.
+            if not counter_proposal_text:
+                counter_proposal_text = (
+                    f"[Playbook: reject — counter_proposal not populated for {clause_ref}]"
+                )
+            return CounterProposalDraft(
+                clause_reference=clause_ref,
+                based_on_recommendation=recommendation,
+                original_text=original_text,
+                counterparty_text=counterparty_text,
+                counter_text=counter_proposal_text,
+                reasoning=rationale or f"Playbook rejection for {clause_ref}.",
+                tone="firm",
+                playbook_reference=None,
+                requires_legal_review=True,
+            )
+
+        if recommendation == "negotiate":
+            revised_language = (compromise.get("revised_language") or "").strip()
+            conditions = (compromise.get("conditions") or "").strip()
+            if revised_language and conditions:
+                counter_text = f"{revised_language}\n\n[Conditions: {conditions}]"
+            elif revised_language:
+                counter_text = revised_language
+            else:
+                counter_text = (
+                    f"[Playbook: negotiate — revised_language not populated for {clause_ref}]"
+                )
+            return CounterProposalDraft(
+                clause_reference=clause_ref,
+                based_on_recommendation=recommendation,
+                original_text=original_text,
+                counterparty_text=counterparty_text,
+                counter_text=counter_text,
+                reasoning=conditions or f"Playbook compromise for {clause_ref}.",
+                tone="collaborative",
+                playbook_reference=None,
+                requires_legal_review=False,
+            )
+
+        # Fallback for any recommendation type not handled above.
+        return CounterProposalDraft(
+            clause_reference=clause_ref,
+            based_on_recommendation=recommendation,
+            original_text=original_text,
+            counterparty_text=counterparty_text,
+            counter_text=(
+                f"[Playbook entry present but recommendation '{recommendation}' "
+                f"not handled — legal review required.]"
+            ),
+            reasoning="Unhandled recommendation type with antora_response present.",
+            tone="neutral",
+            playbook_reference=None,
+            requires_legal_review=True,
+        )
 
     def _emit(self, context: TenantContext, event: StateEvent) -> None:
         for handler in self._subscribers:

@@ -36,8 +36,10 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
 import uuid
+import yaml
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -70,10 +72,60 @@ from acp.layer_b.core.types import (
     TenantContext,
 )
 from acp.layer_b.loaders.pilot_entry_loader import PilotEntryLoader
-from acp.schemas.playbook_schemas import PlaybookEntry, ReviewerReaction
+from acp.schemas.playbook_schemas import (
+    AcceptanceResponse,
+    AntoraResponse,
+    CompromiseResponse,
+    PlaybookEntry,
+    RejectionResponse,
+    ReviewerReaction,
+)
 from acp.layer_b.tests.fixtures.synthetic_config import SYNTHETIC_CONFIG
 
 _pilot_loader = PilotEntryLoader()
+
+
+def _load_pilot_antora_response(md_path: Path) -> AntoraResponse | None:
+    """Extract and parse the antora_response block from a pilot entry markdown file.
+
+    Reads the first ```yaml code block in the file (which is the PlaybookEntry YAML),
+    parses it, and constructs an AntoraResponse from the antora_response sub-block.
+    Returns None if the file is missing or contains no antora_response.
+    """
+    if not md_path.exists():
+        return None
+    content = md_path.read_text()
+    m = re.search(r'```yaml\n(.*?)```', content, re.DOTALL)
+    if not m:
+        return None
+    entry_data = yaml.safe_load(m.group(1))
+    ar = (entry_data or {}).get("antora_response")
+    if not ar:
+        return None
+    rr = ar.get("rejection_response") or {}
+    cr = ar.get("compromise_response") or {}
+    acc = ar.get("acceptance_response") or {}
+    return AntoraResponse(
+        rejection_response=RejectionResponse(
+            rationale=rr.get("rationale", ""),
+            counter_proposal=rr.get("counter_proposal", ""),
+        ),
+        compromise_response=CompromiseResponse(
+            conditions=cr.get("conditions", ""),
+            revised_language=cr.get("revised_language", ""),
+        ),
+        acceptance_response=AcceptanceResponse(
+            rationale=acc.get("rationale", ""),
+        ),
+    )
+
+
+_PILOT_DIR = _REPO_ROOT / "docs" / "architecture" / "pilot_entries"
+_PILOT_ANTORA_RESPONSES: dict[str, AntoraResponse | None] = {
+    "5.1": _load_pilot_antora_response(_PILOT_DIR / "mepa_warranty_warranty_period.md"),
+    "8.3": _load_pilot_antora_response(_PILOT_DIR / "mepa_lol_direct_damages.md"),
+}
+
 
 # Import harness-local modules
 _HARNESS_DIR = Path(__file__).parent
@@ -182,6 +234,12 @@ def _stub_analyze_clause(
     )
     playbook_ref = pilot_ref.entry_id if pilot_ref is not None else None
 
+    # Antora response: populated from parsed pilot entry when a pilot was matched.
+    # None for clauses with no pilot entry (agent-reasoned path in Agent 6).
+    antora_resp: AntoraResponse | None = (
+        _PILOT_ANTORA_RESPONSES.get(clause_reference) if pilot_ref is not None else None
+    )
+
     if change_type == "deleted":
         return ClauseRecommendation(
             clause_reference=clause_reference,
@@ -193,6 +251,7 @@ def _stub_analyze_clause(
             is_signature_blocker=is_signature_blocker,
             playbook_grounded=playbook_grounded,
             evidence_source=evidence_source,
+            antora_response=antora_resp,
         )
     if change_type == "added":
         return ClauseRecommendation(
@@ -205,6 +264,7 @@ def _stub_analyze_clause(
             is_signature_blocker=False,
             playbook_grounded=playbook_grounded,
             evidence_source=evidence_source,
+            antora_response=antora_resp,
         )
     # modified — signature blockers reject; all others negotiate
     if is_signature_blocker:
@@ -221,6 +281,7 @@ def _stub_analyze_clause(
             is_signature_blocker=True,
             playbook_grounded=playbook_grounded,
             evidence_source=evidence_source,
+            antora_response=antora_resp,
         )
     return ClauseRecommendation(
         clause_reference=clause_reference,
@@ -232,6 +293,7 @@ def _stub_analyze_clause(
         is_signature_blocker=False,
         playbook_grounded=playbook_grounded,
         evidence_source=evidence_source,
+        antora_response=antora_resp,
     )
 
 
@@ -250,7 +312,7 @@ def _stub_draft_counter_proposal(
         tone = "firm"
         reasoning = f"Restoring original clause {clause_reference} verbatim per restore_strategy=verbatim."
     else:
-        counter = f"[STUB COUNTER for {clause_reference}] Compromise language to be drafted by counsel."
+        counter = "[AGENT-REASONED — no playbook entry. Legal review required before use.]"
         tone = "collaborative"
         reasoning = f"Stub: {reasoning_from_analysis}"
     return CounterProposalDraft(
