@@ -6,15 +6,28 @@ written to a timestamped output directory under outputs/.
 
 Usage:
     python3 run.py [--patterns PATTERN ...] [--out-dir outputs/<timestamp>]
+                   [--llm {stub,real}] [--compare-with-stub]
 
-    # Run with all modification patterns (default)
+    # Run with all modification patterns (default, stub LLMs)
     python3 run.py
+
+    # Run with real Anthropic SDK calls on delivery/payment patterns
+    python3 run.py --llm real --patterns delivery_ddp delivery_risk_of_loss \
+        delivery_inspection payment_delay --compare-with-stub
 
     # Run specific patterns
     python3 run.py --patterns payment_delay indemnity_deletion
 
     # Specify custom output directory
     python3 run.py --out-dir /tmp/acp-dry-run
+
+--llm real requires ANTHROPIC_API_KEY in the environment. Model is controlled
+by ACP_LLM_MODEL (default: claude-sonnet-4-6). On auth error or unknown model
+the harness prints a STOP message and exits 1.
+
+--compare-with-stub (only with --llm real): runs the stub pipeline first to
+outputs/<out-dir>/_stub_baseline/, then runs the real-LLM pipeline, then writes
+a side-by-side comparison.md to the output directory.
 
 Exit codes:
     0 — all expected artifacts were produced
@@ -23,13 +36,14 @@ Exit codes:
 Outputs produced (all in <out-dir>/):
     counterparty_redline.md      — synthetic counterparty-redlined MEPA
     structural_diff.json         — clause-level diff output
-    redline_analysis.json        — per-clause LLM analysis (stub)
-    counter_proposals.json       — per-clause counter-proposal drafts (stub)
-    lrs_v1.md                    — Legal Review Summary document (stub renderer)
+    redline_analysis.json        — per-clause LLM analysis
+    counter_proposals.json       — per-clause counter-proposal drafts
+    lrs_v1.md                    — Legal Review Summary document
     lrs_v1_metadata.json         — LRS metadata sidecar
     audit_log.json               — all audit events from all agents
-    run_manifest.json            — run metadata (patterns, timestamps, test count)
+    run_manifest.json            — run metadata (patterns, timestamps, llm_mode)
     gate_feedback_log.json       — Gate 1/2 ReviewFeedbackCapture summary
+    comparison.md                — stub vs real side-by-side (--compare-with-stub only)
 """
 
 from __future__ import annotations
@@ -441,11 +455,32 @@ def run_pipeline(
     out_dir: Path,
     tenant_id: str = "alice",
     negotiation_id: str | None = None,
+    *,
+    analyze_fn=None,
+    draft_fn=None,
+    render_fn=None,
+    llm_mode: str = "stub",
 ) -> dict:
     """Run the full 9-agent pipeline on a synthetic redlined MEPA.
 
+    Args:
+        patterns: Modification patterns to apply to the base MEPA.
+        out_dir: Directory to write all output artifacts.
+        tenant_id: Tenant identifier for the negotiation row.
+        negotiation_id: Optional; generated if not supplied.
+        analyze_fn: Injectable analyze_clause callable. Defaults to _stub_analyze_clause.
+        draft_fn: Injectable draft_counter_proposal callable. Defaults to _stub_draft_counter_proposal.
+        render_fn: Injectable render_lrs callable. Defaults to _stub_render_lrs.
+        llm_mode: Label written to the manifest ("stub" or "real").
+
     Returns a manifest dict with run metadata.
     """
+    if analyze_fn is None:
+        analyze_fn = _stub_analyze_clause
+    if draft_fn is None:
+        draft_fn = _stub_draft_counter_proposal
+    if render_fn is None:
+        render_fn = _stub_render_lrs
     negotiation_id = negotiation_id or f"neg-dryrun-{uuid.uuid4().hex[:8]}"
     run_id = uuid.uuid4().hex[:12]
     started_at = datetime.now(timezone.utc)
@@ -517,13 +552,13 @@ def run_pipeline(
         storage=storage,
         audit=audit,
         config={},
-        analyze_clause=_stub_analyze_clause,
+        analyze_clause=analyze_fn,
     )
     counter_agent = CounterProposalAgent(
         storage=storage,
         audit=audit,
         config={},
-        draft_counter_proposal=_stub_draft_counter_proposal,
+        draft_counter_proposal=draft_fn,
     )
     source = ContractRedlineWorkItemSource(ledger)
     portfolio = PortfolioAggregatorAgent(sources=[source], audit=audit)
@@ -534,7 +569,7 @@ def run_pipeline(
         storage=storage,
         audit=audit,
         config={},
-        render_lrs=_stub_render_lrs,
+        render_lrs=render_fn,
     )
 
     # Collected emitted events
@@ -631,6 +666,7 @@ def run_pipeline(
         "negotiation_id": negotiation_id,
         "tenant_id": tenant_id,
         "patterns": patterns,
+        "llm_mode": llm_mode,
         "started_at": started_at.isoformat(),
         "finished_at": finished_at.isoformat(),
         "duration_ms": int((finished_at - started_at).total_seconds() * 1000),
@@ -777,6 +813,109 @@ def smoke_test(out_dir: Path) -> bool:
 
 
 # ---------------------------------------------------------------------------
+# Comparison: stub vs real side-by-side
+# ---------------------------------------------------------------------------
+
+def _write_comparison(stub_dir: Path, real_dir: Path, out_path: Path) -> None:
+    """Read analysis + counter_proposals + LRS from both dirs; write comparison.md."""
+    import os
+
+    def _read_json(d: Path, name: str) -> dict:
+        p = d / name
+        return json.loads(p.read_text()) if p.exists() else {}
+
+    stub_analysis = _read_json(stub_dir, "redline_analysis.json")
+    real_analysis = _read_json(real_dir, "redline_analysis.json")
+    stub_props = _read_json(stub_dir, "counter_proposals.json")
+    real_props = _read_json(real_dir, "counter_proposals.json")
+
+    stub_lrs_files = sorted(stub_dir.glob("lrs_v*.md"))
+    real_lrs_files = sorted(real_dir.glob("lrs_v*.md"))
+    stub_lrs = stub_lrs_files[0].read_text() if stub_lrs_files else "(not found)"
+    real_lrs = real_lrs_files[0].read_text() if real_lrs_files else "(not found)"
+
+    stub_recs = {r["clause_reference"]: r for r in stub_analysis.get("recommendations", [])}
+    real_recs = {r["clause_reference"]: r for r in real_analysis.get("recommendations", [])}
+    stub_drafts = {d["clause_reference"]: d for d in stub_props.get("drafts", [])}
+    real_drafts = {d["clause_reference"]: d for d in real_props.get("drafts", [])}
+
+    all_refs = sorted(set(list(stub_recs) + list(real_recs)))
+
+    model = os.environ.get("ACP_LLM_MODEL", "claude-sonnet-4-6")
+    lines = [
+        "# Stub vs Real-LLM Comparison",
+        "",
+        f"Real LLM model: `{model}`",
+        "",
+        "---",
+        "",
+        "## Per-Clause Analysis",
+        "",
+        "> Counter-proposal text for playbook-matched clauses comes from the",
+        "> `antora_response` block — identical for stub and real.",
+        "> The meaningful difference is in LLM **reasoning** and the **LRS document**.",
+        "",
+    ]
+
+    for ref in all_refs:
+        sr = stub_recs.get(ref, {})
+        rr = real_recs.get(ref, {})
+        blocker = " ⚠ SIGNATURE BLOCKER" if (sr or rr).get("is_signature_blocker") else ""
+        grounded = "✓ playbook" if (sr or rr).get("playbook_grounded") else "✗ agent-reasoned"
+
+        lines += [
+            f"### Clause {ref}{blocker}  [{grounded}]",
+            "",
+            "| | Stub | Real LLM |",
+            "|---|---|---|",
+            (
+                f"| **Recommendation** | {sr.get('recommendation', '—')} "
+                f"| {rr.get('recommendation', '—')} |"
+            ),
+            (
+                f"| **Confidence** | {sr.get('confidence', '—')} "
+                f"| {rr.get('confidence', '—')} |"
+            ),
+        ]
+        lines.append("")
+        lines.append("**Stub reasoning:**")
+        lines.append(f"> {sr.get('reasoning', '—')}")
+        lines.append("")
+        lines.append("**Real LLM reasoning:**")
+        lines.append(f"> {rr.get('reasoning', '—')}")
+
+        sd = stub_drafts.get(ref, {})
+        rd = real_drafts.get(ref, {})
+        if sd or rd:
+            lines += [
+                "",
+                "**Counter-proposal (stub):**",
+                f"```\n{sd.get('counter_text', '—')}\n```",
+                "",
+                "**Counter-proposal (real LLM):**",
+                f"```\n{rd.get('counter_text', '—')}\n```",
+            ]
+        lines += ["", "---", ""]
+
+    lines += [
+        "## LRS Document — Stub",
+        "",
+        "```markdown",
+        stub_lrs,
+        "```",
+        "",
+        "---",
+        "",
+        "## LRS Document — Real LLM",
+        "",
+        real_lrs,
+    ]
+
+    out_path.write_text("\n".join(lines))
+    print(f"      Written: {out_path.name}")
+
+
+# ---------------------------------------------------------------------------
 # CLI entry point
 # ---------------------------------------------------------------------------
 
@@ -797,17 +936,78 @@ def main() -> int:
         default=None,
         help="Output directory. Defaults to outputs/<ISO-timestamp>.",
     )
+    parser.add_argument(
+        "--llm",
+        choices=["stub", "real"],
+        default="stub",
+        help="LLM backend: 'stub' (deterministic, default) or 'real' (Anthropic SDK).",
+    )
+    parser.add_argument(
+        "--compare-with-stub",
+        action="store_true",
+        help=(
+            "With --llm real: also run the stub pipeline and write comparison.md. "
+            "Ignored when --llm stub."
+        ),
+    )
     args = parser.parse_args()
 
     ts = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     out_dir = args.out_dir or (_HARNESS_DIR / "outputs" / ts)
 
-    manifest = run_pipeline(patterns=args.patterns, out_dir=out_dir)
+    # --- Build LLM adapters --------------------------------------------------
+    analyze_fn = None
+    draft_fn = None
+    render_fn = None
+
+    if args.llm == "real":
+        try:
+            from acp.layer_b.adapters.llm_anthropic import (
+                make_real_analyze_clause,
+                make_real_draft_counter_proposal,
+                make_real_render_lrs,
+            )
+            import os
+            model = os.environ.get("ACP_LLM_MODEL", "claude-sonnet-4-6")
+            print(f"[ACP dry-run] LLM mode: REAL (model={model})")
+            analyze_fn = make_real_analyze_clause(
+                _CLAUSE_REF_MAP, _resolver, _pilot_loader, _PILOT_ANTORA_RESPONSES
+            )
+            draft_fn = make_real_draft_counter_proposal()
+            render_fn = make_real_render_lrs()
+        except RuntimeError as exc:
+            print(f"\nSTOP: real-LLM adapter failed to initialise: {exc}")
+            print("Check ANTHROPIC_API_KEY and ACP_LLM_MODEL.")
+            return 1
+    else:
+        print("[ACP dry-run] LLM mode: stub (deterministic)")
+
+    # --- Stub baseline for comparison ----------------------------------------
+    stub_dir: Path | None = None
+    if args.llm == "real" and args.compare_with_stub:
+        stub_dir = out_dir / "_stub_baseline"
+        print(f"\n[ACP dry-run] Running stub baseline first → {stub_dir}")
+        run_pipeline(patterns=args.patterns, out_dir=stub_dir, llm_mode="stub")
+
+    # --- Main run ------------------------------------------------------------
+    manifest = run_pipeline(
+        patterns=args.patterns,
+        out_dir=out_dir,
+        analyze_fn=analyze_fn,
+        draft_fn=draft_fn,
+        render_fn=render_fn,
+        llm_mode=args.llm,
+    )
 
     ok = smoke_test(out_dir)
 
     print(f"\n[7/7] Done. Duration: {manifest['duration_ms']}ms")
     print(f"      Output directory: {out_dir}")
+
+    # --- Comparison ----------------------------------------------------------
+    if stub_dir is not None:
+        print("\n[ACP dry-run] Generating stub vs real comparison...")
+        _write_comparison(stub_dir, out_dir, out_dir / "comparison.md")
 
     if ok:
         print("\nSMOKE TEST PASSED — all expected artifacts present.")
