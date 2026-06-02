@@ -563,7 +563,7 @@ Two canonical HTML deliverables. Current versions live in docs/architecture/;
 prior versions in docs/architecture/archive/; version history in
 docs/architecture/CHANGELOG.md. THIS REPO is the source of truth for which
 version is current — the master handoff does not pin a version.
-- acp_architecture_v5_2026-05-31.html  (Doc 1: layer map & schema model)
+- acp_architecture_v6_2026-06-01.html  (Doc 1: layer map & schema model)
 - acp_layer_c_team_overview_v5.html    (Doc 2: team overview)
 FOLDER RULE: docs/architecture/ holds exactly one version of each doc (latest);
 archive/ holds all priors with dated filenames.

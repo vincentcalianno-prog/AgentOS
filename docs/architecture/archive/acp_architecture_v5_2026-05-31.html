@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ACP layer map &amp; playbook schema model · v5</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#f4f1ea; --ink:#211d18; --body:#36322b; --muted:#8b8275; --hair:#e0d9cc; --card:#fffdf9;
+    --A:#534ab7; --A-bg:#ece9f9; --A-bd:#d2cdf0;
+    --B:#0f6e56; --B-bg:#e4f1eb; --B-bd:#c2e0d5;
+    --C:#92560c; --C-bg:#f8edda; --C-bd:#eed8af;
+    --blue:#185fa5; --blue-bg:#e7eef7; --blue-bd:#c6d8ed;
+    --pink:#b1492f; --pink-bg:#f8e8e1; --pink-bd:#efcbbc;
+    --coral:#c0503f; --gray:#6b6358;
+    --serif:'Lora',Georgia,serif; --sans:'Inter',system-ui,sans-serif; --mono:'IBM Plex Mono',ui-monospace,monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--body);font-family:var(--sans);font-size:15px;line-height:1.62;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:880px;margin:0 auto;padding:64px 28px 110px}
+  .eyebrow{font-family:var(--sans);font-size:11.5px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin:0 0 14px}
+  h1{font-family:var(--serif);font-weight:700;font-size:46px;line-height:1.08;letter-spacing:-.01em;color:var(--ink);margin:0 0 22px}
+  h2{font-family:var(--serif);font-weight:600;font-size:31px;line-height:1.15;color:var(--ink);margin:0 0 16px;letter-spacing:-.01em}
+  p{margin:0 0 16px}
+  code,.m{font-family:var(--mono);font-size:.85em}
+  .m{background:#ece8df;border-radius:4px;padding:1px 6px}
+  .intro{font-size:16.5px;color:var(--body);max-width:680px}
+  .rule{border:none;border-top:1px solid var(--hair);margin:54px 0}
+  .sec{margin-top:54px}
+  /* caveat banner */
+  .banner{display:inline-block;font-size:13px;color:var(--C);background:var(--C-bg);border:1px solid var(--C-bd);border-radius:7px;padding:9px 14px;margin:6px 0 0}
+  /* delta cards */
+  .delta{background:var(--card);border:1px solid var(--hair);border-radius:12px;padding:18px 22px;margin:14px 0;box-shadow:0 1px 2px rgba(0,0,0,.03);position:relative;overflow:hidden}
+  .delta::before{content:"";position:absolute;left:0;top:0;bottom:0;width:5px}
+  .delta.new::before{background:var(--coral)} .delta.upd::before{background:var(--B)}
+  .delta.ver::before{background:var(--A)} .delta.cor::before{background:var(--gray)}
+  .delta .row{display:flex;gap:14px;align-items:flex-start}
+  .delta .txt{flex:1}
+  .delta b{color:var(--ink);font-weight:700}
+  .badge{flex:0 0 auto;font-family:var(--sans);font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:3px 9px;border-radius:5px;margin-top:2px}
+  .b-new{color:#a8402c;background:#f8e6e0;border:1px solid #eec6b9}
+  .b-upd{color:#0f6e56;background:#e1efe9;border:1px solid #bfe0d4}
+  .b-ver{color:#534ab7;background:#ece9f9;border:1px solid #cfcaf0}
+  .b-cor{color:#6b6358;background:#ece9e2;border:1px solid #d8d2c6}
+  /* diagram label */
+  .dlabel{font-family:var(--sans);font-size:11.5px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin:54px 0 12px}
+  /* diagram 1 — architecture */
+  .arch{background:var(--card);border:1px solid var(--hair);border-radius:14px;padding:16px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+  .box{border-radius:12px;padding:16px}
+  .arch>.box{background:var(--A-bg);border:1px solid var(--A-bd)}
+  .lh{text-align:center;margin-bottom:14px}
+  .lh .t{font-weight:700;font-size:15px} .lh .s{font-size:12px;color:var(--muted);margin-top:2px}
+  .lh.A .t{color:var(--A)} .lh.B .t{color:var(--B)} .lh.C .t{color:var(--C)}
+  .acols{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  @media(max-width:640px){.acols{grid-template-columns:1fr}}
+  .layerB{background:var(--B-bg);border:1px solid var(--B-bd);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:12px}
+  .layerC{background:var(--C-bg);border:1px solid var(--C-bd);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:10px}
+  .inner{border-radius:10px;padding:13px;text-align:center}
+  .dna{background:#d6ebe1;border:1px solid var(--B-bd)}
+  .cells{background:var(--pink-bg);border:1px solid var(--pink-bd)}
+  .inner .bt{font-weight:700;font-size:13.5px}
+  .dna .bt{color:var(--B)} .cells .bt{color:var(--pink)}
+  .inner .bts{font-size:11.5px;color:var(--muted);margin-bottom:7px}
+  .inner .li{font-size:12.5px;line-height:1.7}
+  .inner .li i{color:var(--muted);font-size:11.5px}
+  .ccard{background:#fffdf9;border:1px solid var(--C-bd);border-radius:10px;padding:11px 13px}
+  .ccard .h{font-weight:700;font-size:13px;color:var(--C);display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+  .ccard .d{font-size:11.5px;color:var(--body);margin-top:3px;line-height:1.55}
+  .ccard.pma{border-color:var(--A-bd)} .ccard.pma .h{color:var(--A)}
+  .tag{font-family:var(--sans);font-size:9px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:2px 6px;border-radius:4px}
+  .tag.new{color:#a8402c;background:#f8e6e0;border:1px solid #eec6b9}
+  .tag.live{color:#0f6e56;background:#e1efe9;border:1px solid #bfe0d4}
+  .caption{font-family:var(--serif);font-style:italic;font-size:14px;color:var(--muted);line-height:1.7;margin:16px 4px 0;max-width:760px}
+  /* diagram 2 — schema */
+  .ssec{border-radius:12px;padding:16px;margin:14px 0}
+  .ssec.tax{background:var(--blue-bg);border:1px solid var(--blue-bd)}
+  .ssec.pos{background:var(--pink-bg);border:1px solid var(--pink-bd)}
+  .ssec.run{background:var(--C-bg);border:1px solid var(--C-bd)}
+  .ssec.learn{background:var(--A-bg);border:1px solid var(--A-bd)}
+  .ssec .sh{text-align:center;margin-bottom:12px}
+  .ssec .sh .t{font-family:var(--sans);font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase}
+  .ssec .sh .s{font-size:12px;color:var(--muted);font-style:italic;margin-top:2px}
+  .ssec.tax .t{color:var(--blue)} .ssec.pos .t{color:var(--pink)} .ssec.run .t{color:var(--C)} .ssec.learn .t{color:var(--A)}
+  .egrid{display:grid;gap:11px}
+  .egrid.c4{grid-template-columns:repeat(4,1fr)} .egrid.c3{grid-template-columns:repeat(3,1fr)} .egrid.c2{grid-template-columns:repeat(2,1fr)}
+  @media(max-width:640px){.egrid.c4,.egrid.c3,.egrid.c2{grid-template-columns:1fr}}
+  .ecard{background:#fffdf9;border:1px solid var(--hair);border-radius:9px;padding:12px 14px}
+  .ecard .en{font-weight:700;font-size:13.5px;color:var(--ink);display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-bottom:7px}
+  .ecard .ef{font-family:var(--mono);font-size:11.5px;line-height:1.65;color:var(--body);white-space:pre-wrap}
+  .ecard .nt{font-family:var(--serif);font-style:italic;font-size:12px;color:var(--muted);line-height:1.55;margin-top:9px}
+  . minibadge{font-size:9px}
+  .mb{font-family:var(--sans);font-size:9px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:2px 6px;border-radius:4px;color:#0f6e56;background:#e1efe9;border:1px solid #bfe0d4}
+  .mb.ord{color:#534ab7;background:#ece9f9;border:1px solid #cfcaf0}
+  .blockq{border-left:4px solid var(--A);padding:4px 0 4px 20px;margin:24px 4px;font-family:var(--serif);font-style:italic;font-size:16px;color:var(--body);line-height:1.7}
+  /* diagram 3 & 4 — flows */
+  .fwrap{background:var(--card);border:1px solid var(--hair);border-radius:14px;padding:24px 18px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+  .fbox{border-radius:11px;padding:13px 16px;text-align:center;max-width:560px;margin:0 auto}
+  .fbox .ft{font-weight:700;font-size:14px;margin-bottom:3px}
+  .fbox .fd{font-size:12px;line-height:1.5}
+  .fbox .fd .mm{font-family:var(--mono);font-size:11px}
+  .f-A{background:var(--A-bg);border:1px solid var(--A-bd)} .f-A .ft{color:var(--A)}
+  .f-B{background:var(--B-bg);border:1px solid var(--B-bd)} .f-B .ft{color:var(--B)}
+  .f-C{background:var(--C-bg);border:1px solid var(--C-bd)} .f-C .ft{color:var(--C)}
+  .f-blue{background:var(--blue-bg);border:1px solid var(--blue-bd)} .f-blue .ft{color:var(--blue)}
+  .f-plain{background:#fff;border:1px dashed #cfc8ba}
+  .down{text-align:center;color:#b3aa9b;font-size:20px;margin:9px 0}
+  .ilab{text-align:center;font-family:var(--serif);font-style:italic;font-size:12.5px;color:var(--muted);margin:7px 0}
+  .frow{display:flex;align-items:stretch;justify-content:center;gap:8px;flex-wrap:wrap}
+  .frow .fbox{flex:1;min-width:150px;max-width:none;margin:0}
+  .plus{align-self:center;font-size:20px;color:var(--muted);font-weight:600}
+  /* callouts */
+  .co{border-radius:12px;padding:16px 20px;margin:16px 0;text-align:center;font-size:13.5px;line-height:1.6}
+  .co.cp{background:var(--pink-bg);border:1px solid var(--pink-bd)} .co.cp b{color:var(--pink)}
+  .co.sg{background:var(--A-bg);border:1px solid var(--A-bd)} .co.sg b{color:var(--A)}
+  /* evidence */
+  .ev2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:16px 0}
+  @media(max-width:640px){.ev2{grid-template-columns:1fr}}
+  .evc{background:var(--card);border:1px solid var(--hair);border-radius:12px;padding:16px 18px}
+  .evc.t1{border-top:4px solid var(--B)} .evc.t2{border-top:4px solid var(--C)}
+  .evc .eh{font-weight:700;font-size:14px;margin-bottom:9px}
+  .evc.t1 .eh{color:var(--B)} .evc.t2 .eh{color:var(--C)}
+  .evc ul{margin:0;padding:0;list-style:none} .evc li{font-size:12.5px;padding:3px 0;color:var(--body)}
+  .evc li b{color:var(--ink)}
+  /* where we sit */
+  .state{background:var(--card);border:1px solid var(--hair);border-radius:12px;padding:15px 20px;margin:12px 0;box-shadow:0 1px 2px rgba(0,0,0,.03);display:flex;gap:16px;align-items:flex-start}
+  .stb{flex:0 0 auto;font-family:var(--sans);font-size:10px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;padding:4px 9px;border-radius:5px;margin-top:2px;white-space:nowrap}
+  .stb.built{color:#0f6e56;border:1px solid #6fae9b;background:#eef6f2}
+  .stb.locked{color:#534ab7;border:1px solid #9d96d8;background:#f0eefa}
+  .stb.blocked{color:#c0503f;border:1px solid #dd9182;background:#faece8}
+  .stb.pending{color:#6b6358;border:1px solid #c2bbad;background:#f1efe9}
+  .state .sx{flex:1;font-size:13.5px;line-height:1.6}
+  .state .sx b{color:var(--ink)}
+  .gate-co{border-radius:10px;padding:14px 18px;margin:14px 0;font-size:13px;line-height:1.6;background:var(--pink-bg);border-left:5px solid var(--coral)}
+  .gate-co b{color:var(--pink)}
+  .adr-co{border-radius:10px;padding:14px 18px;margin:14px 0;font-size:13px;line-height:1.6;background:#f1efe9;border-left:5px solid var(--gray)}
+  .adr-co b{color:var(--ink)}
+  .closing{font-size:14px;color:var(--body);margin:26px 0 0}
+  footer{display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-top:60px;padding-top:18px;border-top:1px solid var(--hair);font-family:var(--sans);font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <p class="eyebrow">Architecture Reference · v5 · 31 May 2026</p>
+  <h1>ACP layer map &amp; playbook schema model</h1>
+  <p class="intro">Where we sit after the Step 0 schema commits, the Agent 6 <code>antora_response</code> wiring, and the start of Sprint 1 authoring. Same four diagrams as v4: three-layer architecture, 16-entity schema model, overlay resolution flow, and the learning loop. See “What changed since v4” below.</p>
+  <span class="banner">⚠ per handoff + session screenshots, unverified against the live repo · confirm HEAD with <code>git log --oneline</code> before treating as canonical</span>
+
+  <hr class="rule">
+
+  <!-- ===================== DELTA ===================== -->
+  <div class="sec">
+    <p class="eyebrow">What changed since v4</p>
+    <h2>Delta from snapshot v4 (2026-05-30)</h2>
+    <p>v4 captured the 15-entity model with <code>antora_response</code>, <code>OutcomeRecord</code>, and <code>RecommendationReview</code> queued for commit, and Agent 6 still emitting stub counter-language. This v5 supersedes v4 with the same four-diagram structure: Step 0 schema commits have landed (16 entities now in the repo), Agent 6 reads <code>antora_response</code>, Gate 1/2 feedback capture is wired into the harness, and Sprint 1 authoring has started. HEAD <span class="m">0c0a216</span> → <span class="m">4f90cff</span>; 409 → 470 tests. Verify counts in <span class="m">acp/schemas/playbook_schemas.py</span> before authoring.</p>
+
+    <div class="delta new"><div class="row"><span class="badge b-new">New</span><div class="txt"><b>Agent 6 antora_response wired (@ 4f90cff).</b> Counter Proposer now reads <code>effective_entry.antora_response</code>. Pilot-matched clauses (§5.1, §8.3) emit real playbook counter-language; clauses with no entry emit <span class="m">[AGENT-REASONED — legal review required]</span>. The <code>is_signature_blocker</code> verbatim-restore (Finding F) is preserved untouched.</div></div></div>
+
+    <div class="delta upd"><div class="row"><span class="badge b-upd">Updated</span><div class="txt"><b>Step 0 schema commits landed.</b> <code>antora_response</code> (3-part), <code>OutcomeRecord</code>, and <code>RecommendationReview</code> are now committed in the repo (<span class="m">bcf3015</span>, <span class="m">10a643b</span>), no longer queued. <span class="m">acp/schemas/</span> created at <span class="m">bcf3015</span>; <span class="m">acp/layer_b/loaders/</span> at <span class="m">cc36858</span> (<code>PilotEntryLoader</code>).</div></div></div>
+
+    <div class="delta new"><div class="row"><span class="badge b-new">New</span><div class="txt"><b>ReviewFeedbackCapture wired.</b> Gate 1 (<code>capture_owner_feedback</code>) + Gate 2 (<code>capture_legal_feedback</code>) built, tested, and wired into the dry-run harness (<span class="m">66598db</span>). Harness now emits 9 artifacts (was 8). Feeds the RecommendationReview Tier-2 pipeline.</div></div></div>
+
+    <div class="delta new"><div class="row"><span class="badge b-new">New</span><div class="txt"><b>Durable substrate committed.</b> <span class="m">PROJECT_CONTEXT.md</span> (<span class="m">4aa2e8b</span>) and <span class="m">ontology.md</span> (<span class="m">a392d0b</span>) committed. Read PROJECT_CONTEXT.md first in every new session; ontology is locked before mass Sprint 1 authoring to prevent Cluster A rework.</div></div></div>
+
+    <div class="delta upd"><div class="row"><span class="badge b-upd">Updated</span><div class="txt"><b>Sprint 1 authoring started.</b> <span class="m">mepa.delivery.ddp_terms</span> committed as the first Sprint 1 entry — DDP terms, risk of loss, duty-passthrough rejection, IEEPA note; Pratt anchor $681,900 / 22-week ARO / DDP to Pratt KS. Queue continues: <span class="m">risk_of_loss</span> → <span class="m">inspection_acceptance</span> → <span class="m">payment.net_terms</span> (real position Net-90, baseline Net-30).</div></div></div>
+
+    <div class="delta cor"><div class="row"><span class="badge b-cor">Corrected</span><div class="txt"><b>Spec deviations to carry forward.</b> <code>ClauseRecommendation</code> lives in <span class="m">redline_analysis.py</span> line 59 (not <span class="m">playbook_schemas.py</span>). <code>capture_scm_feedback</code> renamed <code>capture_owner_feedback</code> — SCM is forbidden in Layer B. <code>AntoraResponse</code> canonical def is in <span class="m">playbook_schemas.py</span>; <span class="m">redline_analysis.py</span> imports it — never redefine.</div></div></div>
+
+    <div class="delta new"><div class="row"><span class="badge b-new">New</span><div class="txt"><b><code>_PILOT_ANTORA_RESPONSES</code> open item.</b> The pilot markdown <code>antora_response</code> YAML was not fully machine-readable at Agent 6 wiring (the STEP 3 stop-and-ask condition fired). Flagged in PROJECT_CONTEXT.md; resolve before relying on pilot-matched counter-language end-to-end.</div></div></div>
+  </div>
+
+  <hr class="rule">
+
+  <!-- ===================== DIAGRAM 1 ===================== -->
+  <p class="dlabel">Diagram 1 of 4</p>
+  <h2>Layer A / B / C architecture (refined)</h2>
+  <div class="arch">
+    <div class="box">
+      <div class="lh A"><div class="t">Layer A — AgentOS</div><div class="s">Umbrella substrate · 16 schema entities · learning-loop patterns · zero content · zero IP</div></div>
+      <div class="acols">
+        <div class="layerB">
+          <div class="lh B" style="margin-bottom:0"><div class="t">Layer B — WorkflowOS</div><div class="s">Platform substrate · same binary every deployment</div></div>
+          <div class="inner dna">
+            <div class="bt">Platform DNA</div><div class="bts">Workflow-agnostic</div>
+            <div class="li">Agent 3 — State Manager</div>
+            <div class="li">Agent 8 — Workflow Orchestrator</div>
+            <div class="li">Agent 9 — Portfolio Aggregator</div>
+            <div class="li">Adapter interfaces — <i>mechanisms</i></div>
+            <div class="li">Loaders &amp; resolvers (Phase 2a) — <i>mechanisms</i></div>
+            <div class="li">Pattern extractor (Phase 3) — <i>agent or mechanism TBD</i></div>
+            <div class="li">Shared learning registry (Phase 3) — <i>store</i></div>
+            <div class="li">Audit log — <i>store</i></div>
+            <div class="li"><i>Tenancy enforcer · Event registry</i></div>
+          </div>
+          <div class="inner cells">
+            <div class="bt">Workflow Cells</div><div class="bts">contract_redline workflow</div>
+            <div class="li">Agent 1 — Email Watcher</div>
+            <div class="li">Agent 2 — Attachment Extractor</div>
+            <div class="li">Agent 4 — Structural Diff</div>
+            <div class="li">Agent 5 — Clause Analyzer</div>
+            <div class="li">Agent 6 — Counter Proposer <i>(antora_response wired)</i></div>
+            <div class="li">Agent 7 — LRS Renderer</div>
+          </div>
+        </div>
+        <div class="layerC">
+          <div class="lh C" style="margin-bottom:0"><div class="t">Layer C — Deployment</div><div class="s">Antora-specific · all content · all IP</div></div>
+          <div class="ccard"><div class="h">Playbook content <span class="tag live">committed</span></div><div class="d">PlaybookEntry instances + antora_response (3-part) + outcome_log · Overlay instances · CrossClauseDependency</div></div>
+          <div class="ccard"><div class="h">Template repository <span class="tag new">new</span></div><div class="d">layer_c_antora/templates/ · TemplateRegistry instances · versioned MPA / MEPA / future · Sandelin-controlled · read-only</div></div>
+          <div class="ccard"><div class="h">Skills</div><div class="d">SKILL.md format · reasoning patterns · ~100-tok metadata + &lt;5k loaded · cross-AI-tool portable</div></div>
+          <div class="ccard"><div class="h">Deployment config</div><div class="d">Credentials, routing · SLA, schema extensions · 5-category deployment contract</div></div>
+          <div class="ccard"><div class="h">Runtime state</div><div class="d">Negotiations · audit log · ConcessionLog, promotions · outcome_log (raw IP, never leaves)</div></div>
+          <div class="ccard pma"><div class="h">Playbook Maintenance Agent <span class="tag new">cell</span></div><div class="d">Layer C cell · watches template repo · flags stale entries · surfaces proposed updates · human approval required — never auto-updates</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <p class="caption">Layer structure unchanged from v4: Layer A is the umbrella, Layer B is the workflow substrate split into Platform DNA and Workflow Cells, Layer C is Antora-specific deployment content. What evolved at v5: (1) Agent 6 now reads <code>antora_response</code> — the Counter Proposer cell is wired; (2) the three previously-queued schema entities are committed, so Layer A carries 16 entities; (3) <code>outcome_log</code> in Runtime state stays raw / full-IP in Layer C, never crossing the boundary. DNA/cells separation is still conceptual, not structural — extract to platform DNA only on byte-for-byte duplication at workflow #2.</p>
+
+  <hr class="rule">
+
+  <!-- ===================== DIAGRAM 2 ===================== -->
+  <p class="dlabel">Diagram 2 of 4</p>
+  <h2>16-entity schema model</h2>
+  <p>16 entities now confirmed in the repo. <code>OutcomeRecord</code> (15th) and <code>RecommendationReview</code> (16th) were committed at Step 0 (<span class="m">bcf3015</span> / <span class="m">10a643b</span>) — no longer queued. The <code>antora_response</code> 3-part block is committed on PlaybookEntry. All entity schemas live in Layer A; instances live in Layer C.</p>
+
+  <div class="ssec tax">
+    <div class="sh"><div class="t">Taxonomy entities (4)</div><div class="s">Define what kinds of things exist</div></div>
+    <div class="egrid c4">
+      <div class="ecard"><div class="en">ContractType</div><div class="ef">id, name
+applicable_categories
+required_sections
+applicable_overlay_axes</div><div class="nt">7 types: NDA, MPA, MEPA, MSA, SOW, PO, MOU/LOI</div></div>
+      <div class="ecard"><div class="en">ContractRelationship</div><div class="ef">parent_type,
+child_type
+relationship_type
+cardinality</div><div class="nt">9 instances. operates_under | references</div></div>
+      <div class="ecard"><div class="en">Category</div><div class="ef">id, name, description
+sub_clauses:
+  List[SubClause]</div><div class="nt">Hierarchical container for related clauses</div></div>
+      <div class="ecard"><div class="en">SubClause</div><div class="ef">id, name, description
+parent_category
+applicable_contract_types
+sub_sub_clauses optional</div><div class="nt">Two-level convention; third level permitted</div></div>
+    </div>
+  </div>
+
+  <div class="ssec pos">
+    <div class="sh"><div class="t">Position entities (6 — includes TemplateRegistry)</div><div class="s">Define Antora&#x2019;s judgment per clause</div></div>
+    <div class="egrid c1" style="grid-template-columns:1fr">
+      <div class="ecard"><div class="en">PlaybookEntry <span class="mb">updated</span></div><div class="ef">composite id (contract_type, category, sub_clause)
+defend_baseline (template_ref + guidance)
+accept_modifications: List[Pattern]
+reject_thresholds: List[Pattern]
+negotiability enum: boilerplate | parametric |
+  negotiable | signature_blocker
+constraints (numeric only)
+antora_response {           <span class="mb">committed</span>
+  rejection_response  {rationale, counter_proposal}
+  compromise_response {conditions, revised_lang}
+  acceptance_response {rationale}
+}
+outcome_log: List[OutcomeRecord]   <span class="mb">committed</span>
+review_status / last_reviewed_by / last_reviewed_date
+evidence_tier: verified | provisional (proposed)
+recommendation_reviews: List[RecommendationReview]  <span class="mb">committed</span>
+pending_items, examples, related_entries, metadata</div><div class="nt">accept_modifications + reject_thresholds remain — they classify supplier redlines. antora_response is Antora&#x2019;s response language. They coexist. supplier_counter_language lives on RuntimeConcession only — do not touch.</div></div>
+    </div>
+    <div class="egrid c3" style="margin-top:11px">
+      <div class="ecard"><div class="en">Pattern</div><div class="ef">id
+description
+example_language
+rationale</div><div class="nt">4 fields. No match_criteria (not speculative). Used in accept_modifications + reject_thresholds lists.</div></div>
+      <div class="ecard"><div class="en">Overlay</div><div class="ef">id
+axis: counterparty |
+  project | commodity
+scope_value
+applies_to: List[entry_ref]
+modifications
+  add_to / remove_from
+  constraints
+  guidance_override
+rationale, review_status</div><div class="nt">Tightening only. Most-restrictive-wins. Loosening is RuntimeConcession territory.</div></div>
+      <div class="ecard"><div class="en">CrossClauseDependency</div><div class="ef">id
+involved_entries:
+  List[entry_ref]
+interaction_type:
+  mutual_dependency |
+  mutual_exclusion |
+  requires_consistency
+risk_if_violated
+example, review_status</div><div class="nt">No detection_pattern field — LLM does semantic interpretation. Origin: MCM cross-document exposure finding (PDC failure scenario).</div></div>
+    </div>
+    <div class="egrid c2" style="margin-top:11px">
+      <div class="ecard"><div class="en">ResolutionResult</div><div class="ef">query (contract_type_id,
+  category_id,
+  sub_clause_id,
+  context)
+effective_entry
+provenance: List[source]</div><div class="nt">Computed at query time, not stored. Audit log stores full provenance per ClauseRecommendation.</div></div>
+      <div class="ecard"><div class="en">TemplateRegistry <span class="mb ord">14th</span></div><div class="ef">id, display_name
+versions: List[TemplateVersion]
+metadata
+TemplateVersion {
+  version (semver)
+  effective_date
+  document_ref
+  notes
+}</div><div class="nt">Maps (template_id, version) → canonical doc. New versions auto-flag stale PlaybookEntries. Sandelin-controlled. Added commit 454b7ec.</div></div>
+    </div>
+  </div>
+
+  <div class="ssec run">
+    <div class="sh"><div class="t">Runtime entities (4)</div><div class="s">Capture what happens during negotiation</div></div>
+    <div class="egrid c4">
+      <div class="ecard"><div class="en">RuntimeConcession</div><div class="ef">negotiation_id
+diff_entry_ref
+effective_entry_at_decision
+supplier_counter_language
+authorizations
+required_authorization
+scope: this_negotiation</div><div class="nt">supplier_counter_language lives here only — captures supplier&#x2019;s proposed language. Never auto-promotes.</div></div>
+      <div class="ecard"><div class="en">AuthorizationEvent</div><div class="ef">id, identity, role
+action:
+  approved |
+  requested_changes |
+  rejected
+timestamp, context</div><div class="nt">Authorization workflow mechanism. Deployment decides policy; schema defines event structure.</div></div>
+      <div class="ecard"><div class="en">RequiredAuthorization</div><div class="ef">scope_trigger
+required_roles
+required_count</div><div class="nt">Policy entity defining what authorizations are needed per concession scope.</div></div>
+      <div class="ecard"><div class="en">ConcessionPromotion</div><div class="ef">id
+promoted_concessions
+resulting_overlay_id
+promoted_by (AuthEvent)
+rationale, timestamp</div><div class="nt">Deliberate human act. Surfaced by Agent 9 when patterns emerge. Converts runtime loosening → permanent overlay.</div></div>
+    </div>
+  </div>
+
+  <div class="ssec learn">
+    <div class="sh"><div class="t">Learning entities (2 — committed, 15th + 16th)</div><div class="s">Enable the learning loop — Phase 3+, schema in place now</div></div>
+    <div class="egrid c1" style="grid-template-columns:1fr;gap:11px">
+      <div class="ecard"><div class="en">OutcomeRecord <span class="mb ord">15th · committed</span></div><div class="ef">date · supplier · agent_recommendation · actual_outcome
+rounds_to_close · sandelin_override: bool · notes
+abstraction_status: pending | extracted | skipped | flagged_for_review</div><div class="nt">Lives in PlaybookEntry.outcome_log. Raw IP — never leaves Layer C. abstraction_status prevents double-processing into the shared registry. Enables drift detection and playbook calibration over time.</div></div>
+      <div class="ecard"><div class="en">RecommendationReview <span class="mb ord">16th · committed</span></div><div class="ef">date · proposed_counter · reviewer_role
+reaction: accepted | edited | rejected · revised_language · rationale
+abstraction_status · notes</div><div class="nt">Surfaces as recommendation_reviews on PlaybookEntry. Captures Jeff/Sandelin redline feedback as Tier-2 evidence (Flow 2). abstraction_status prevents double-processing.</div></div>
+    </div>
+  </div>
+
+  <p class="blockq">All 16 entity schemas are Layer A substrate — their schemas are universal and port across deployments. The instances of each entity are Layer C content — Antora&#x2019;s specific contract types, categories, playbook entries, overlays, and runtime data. Schema in Layer A; content in Layer C.</p>
+
+  <!-- authoring standard -->
+  <p class="dlabel">Authoring Standard · Locked</p>
+  <h2>PlaybookEntry antora_response — three-part block</h2>
+  <p>Every PlaybookEntry must include response language for all three states. No silent accepts, no bare rejects. Counter-language is mandatory. The three fields coexist with <code>accept_modifications</code> and <code>reject_thresholds</code> — those classify supplier redlines; <code>antora_response</code> holds what Antora says back.</p>
+  <div class="egrid c3">
+    <div class="ecard" style="border-top:4px solid var(--coral)"><div class="en" style="color:var(--coral)">REJECT</div><div class="ef">rejection_response {
+  rationale: str
+  counter_proposal: str
+}</div><div class="nt">Risk rationale + clean counter-proposal restoring Antora&#x2019;s position. Firm language; no hedging on signature blockers.</div></div>
+    <div class="ecard" style="border-top:4px solid var(--C)"><div class="en" style="color:var(--C)">COMPROMISE</div><div class="ef">compromise_response {
+  conditions: str
+  revised_language: str
+}</div><div class="nt">Why the deviation is tolerable + what revised language Antora will accept. Conditions must be specific.</div></div>
+    <div class="ecard" style="border-top:4px solid var(--B)"><div class="en" style="color:var(--B)">ACCEPT</div><div class="ef">acceptance_response {
+  rationale: str
+}</div><div class="nt">Why the baseline clause already protects Antora adequately. Not optional — silent accepts are rejected by schema validation.</div></div>
+  </div>
+
+  <hr class="rule">
+
+  <!-- ===================== DIAGRAM 3 ===================== -->
+  <p class="dlabel">Diagram 3 of 4</p>
+  <h2>Overlay resolution flow</h2>
+  <div class="fwrap">
+    <div class="fbox f-A"><div class="ft">Query</div><div class="fd">(contract_type, category, sub_clause, context)<br>context = counterparty + project + commodity</div></div>
+    <div class="down">↓</div>
+    <div class="frow">
+      <div class="fbox f-blue"><div class="ft">Baseline</div><div class="fd">PlaybookEntry defend_baseline · accept / reject patterns</div></div>
+      <div class="plus">+</div>
+      <div class="fbox f-pink" style="background:var(--pink-bg);border:1px solid var(--pink-bd)"><div class="ft" style="color:var(--pink)">Counterparty Overlay</div><div class="fd">e.g., MCM add tighter rejects</div></div>
+      <div class="plus">+</div>
+      <div class="fbox f-C"><div class="ft">Project Overlay</div><div class="fd">e.g., Pratt grid-critical constraints</div></div>
+      <div class="plus">+</div>
+      <div class="fbox f-C"><div class="ft">Commodity Overlay</div><div class="fd">e.g., PDC equipment-specific</div></div>
+    </div>
+    <div class="down">↓</div>
+    <div class="fbox f-B" style="max-width:680px"><div class="ft">Resolver (Layer B)</div><div class="fd">most-restrictive-wins · unions reject_thresholds · tightens constraints · tracks provenance<br>Lists: union add_to operations + apply remove_from. Numerics: max wins across overlays.</div></div>
+    <div class="down">↓</div>
+    <div class="fbox f-C" style="max-width:680px"><div class="ft">ResolutionResult</div><div class="fd">effective_entry: merged PlaybookEntry<br>provenance: [baseline → counterparty_overlay → project_overlay → resolution_rule]<br>stored in audit log per ClauseRecommendation</div></div>
+    <div class="down">↓</div>
+    <div class="fbox f-A" style="max-width:680px"><div class="ft">antora_response lookup <span style="font-family:var(--sans);font-size:10px;font-weight:700;color:var(--B);background:#e1efe9;border:1px solid #bfe0d4;border-radius:4px;padding:1px 6px;vertical-align:middle">Agent 6 wired @ 4f90cff</span></div><div class="fd">Agent 5 / Agent 6 read effective_entry.antora_response<br>→ rejection_response / compromise_response / acceptance_response<br>Counter-language ready for LRS and supplier communication</div></div>
+  </div>
+  <p class="caption">Loosening is intentionally not handled by overlays. If a supplier counter is less restrictive than the resolved position but Antora&#x2019;s team wants to accept it, that&#x2019;s a RuntimeConcession — a separate runtime mechanism with multi-party human authorization, scoped to a single negotiation, never auto-promoted into permanent overlays. Promotion to overlay is a deliberate, reviewed, human act captured as ConcessionPromotion. Deferred overlay axis candidates: geography/jurisdiction, regulatory regime (BAA/IRA/FEOC/ITAR), contract value tier — add on evidence only.</p>
+
+  <hr class="rule">
+
+  <!-- ===================== DIAGRAM 4 ===================== -->
+  <p class="dlabel">Diagram 4 of 4 · Phase 3+</p>
+  <h2>Learning loop — two flows, IP-safe by design</h2>
+  <p>There are two distinct learning flows. Both are accommodated in the schema now; only one crosses the deployment boundary. Execution is deferred to Phase 3+, but <code>outcome_log</code> and <code>abstraction_status</code> are in place from the first Sprint 1 entries.</p>
+  <div class="ev2">
+    <div class="evc" style="border-top:4px solid var(--B)"><div class="eh" style="color:var(--B)">Flow 1 — Within deployment</div><div style="font-size:12.5px;line-height:1.6">Antora learns about Antora. <code>outcome_log</code> → drift detection → Playbook Maintenance Agent surfaces proposed updates → Sandelin approves. Stays entirely inside Layer C. No IP crosses any boundary.</div></div>
+    <div class="evc" style="border-top:4px solid var(--A)"><div class="eh" style="color:var(--A)">Flow 2 — Across deployments (below)</div><div style="font-size:12.5px;line-height:1.6">The platform learns from every deployment. Layer C → Layer B (IP-stripped) → Layer A. This is where Layer A and B learn from Layer C findings. IP-sensitive — the stripping + validation pass is the guardrail.</div></div>
+  </div>
+  <div class="fwrap" style="margin-top:14px">
+    <div class="fbox f-C" style="max-width:680px"><div class="ft">Layer C — Raw outcome_log</div><div class="fd">Full IP: counterparty names, pricing, verbatim clause language, Sandelin overrides. Lives in PlaybookEntry.outcome_log. Never leaves Layer C. abstraction_status tracks processing state.</div></div>
+    <div class="ilab">IP validation pass — strips proper nouns, specific figures, verbatim clause language</div>
+    <div class="fbox f-plain" style="max-width:620px"><div class="ft" style="color:var(--ink)">Layer B: IP Validation Pass</div><div class="fd">Checks abstraction_status = pending · verifies no IP leakage before registry write<br>Sets abstraction_status → extracted | skipped | flagged_for_review</div></div>
+    <div class="down">↓</div>
+    <div class="fbox f-B" style="max-width:680px"><div class="ft">Layer B — Pattern Extractor → Shared Learning Registry</div><div class="fd">Abstracted behavioral patterns only. No proper nouns, no specific figures, no verbatim language.<br>Example: &#x201C;signature_blocker positions consistently compromised after 2 rounds → consider tiered opening.&#x201D;<br>Registry is a compounding platform asset — benefits all deployments. Org A&#x2019;s patterns help Org B.</div></div>
+    <div class="down">↓</div>
+    <div class="fbox f-A" style="max-width:680px"><div class="ft">Layer A — Behavioral Refinements</div><div class="fd">Registry patterns consumed as agent reasoning improvements. Platform becomes smarter with every negotiation across all deployments.</div></div>
+  </div>
+  <div class="co cp"><b>Control principle (non-negotiable):</b> No agent at any layer autonomously updates Antora&#x2019;s negotiating positions. Playbook Maintenance Agent surfaces proposed updates only. Sandelin approves every position change — not the system.<br>Must be explicit in the Sandelin IP conversation.</div>
+  <div class="co sg"><b>Stability guardrail:</b> Learning lives in the registry and the behavioral refinements agents consult — <i>not</i> in the schema. The 16-entity model and the deployment contract stay fixed. &#x201C;Layer A learns&#x201D; means its agents reason with better patterns, not that Layer A rewrites itself. Schema mutation from Layer C findings would be content leaking into substrate — portability breaks.</div>
+
+  <hr class="rule">
+
+  <!-- ===================== EVIDENCE ===================== -->
+  <p class="eyebrow">Playbook Evidence Model</p>
+  <h2>Two-tier evidence model</h2>
+  <p><code>evidence_tier</code> is epistemic — it indicates counterparty confirmation, not quality. Tier 2 (provisional) entries are real, calibrated positions. Every closed agreement upgrades entries from Tier 2 → Tier 1. The first executed MEPA will be a major calibration event. Open vocabulary question: <code>review_status</code> (workflow: draft | approved | deprecated) vs <code>evidence_tier</code> (verified | provisional) answer different questions — flag to Sandelin before Sprint 1.</p>
+  <div class="ev2">
+    <div class="evc t1"><div class="eh">Tier 1 — Verified <span style="font-weight:400;color:var(--muted)">(review_status: verified)</span></div>
+      <ul>
+        <li>· MPI Morheat MPA — no-redline baseline, INTERNATIONAL template</li>
+        <li>· MCM Engineering PO T&amp;Cs — 4-round negotiated, closed May 6</li>
+        <li>· CFS / Cancellation Exhibit A — verbatim language accepted by vendor</li>
+        <li>· <b>Zero executed MEPAs — first MEPA close = major calibration event</b></li>
+      </ul>
+    </div>
+    <div class="evc t2"><div class="eh">Tier 2 — Provisional <span style="font-weight:400;color:var(--muted)">(review_status: provisional)</span></div>
+      <ul>
+        <li>· Jeff / Sandelin redline feedback — real calibrated positions</li>
+        <li>· JST cross-reference positions (§8.3 LOL, §7 indemnity)</li>
+        <li>· Texas Transformers + nVent MEPA redline analysis</li>
+        <li>· Nanez MEPA redline analysis</li>
+        <li>· MCM MEPA cross-document exposure finding</li>
+      </ul>
+    </div>
+  </div>
+
+  <hr class="rule">
+
+  <!-- ===================== WHERE WE SIT ===================== -->
+  <p class="eyebrow">Current State</p>
+  <h2>Where we sit</h2>
+
+  <div class="state"><span class="stb built">Built</span><div class="sx"><b>Layer B agents.</b> All seven contract_redline agents (1, 2, 4, 5, 6, 7) plus platform agents 3, 8, 9 exist as code on <span class="m">feature/acp-phase1-migration</span>. Agent 6 now reads <code>antora_response</code>. <b>470 tests passing</b> on HEAD <span class="m">4f90cff</span>. Discipline check 4/4 clean.</div></div>
+
+  <div class="state"><span class="stb built">Built</span><div class="sx"><b>Step 0 schema commits.</b> <code>antora_response</code> (3-part), <code>OutcomeRecord</code>, and <code>RecommendationReview</code> committed (<span class="m">bcf3015</span>, <span class="m">10a643b</span>). <span class="m">acp/schemas/</span> and <span class="m">acp/layer_b/loaders/</span> created; PilotEntryLoader live. The 16-entity model is now in the repo, not queued.</div></div>
+
+  <div class="state"><span class="stb built">Built</span><div class="sx"><b>Gate 1/2 feedback capture.</b> ReviewFeedbackCapture wired into the dry-run harness (<span class="m">66598db</span>) — <code>capture_owner_feedback</code> + <code>capture_legal_feedback</code>. Harness emits 9 artifacts, under 100&nbsp;ms, deterministic stub LLMs. Confidence-tier headers render in the LRS.</div></div>
+
+  <div class="state"><span class="stb built">Built</span><div class="sx"><b>Durable substrate.</b> <span class="m">PROJECT_CONTEXT.md</span> (<span class="m">4aa2e8b</span>) and <span class="m">ontology.md</span> (<span class="m">a392d0b</span>) committed. PROJECT_CONTEXT is read first every session; ontology locked before mass authoring.</div></div>
+
+  <div class="state"><span class="stb built">Built</span><div class="sx"><b>Two pilot Layer C entries.</b> <span class="m">mepa_lol_direct_damages.md</span> (Pilot #1) and <span class="m">mepa_warranty_warranty_period.md</span> (Pilot #2) updated to JST §8.3 positions + antora_response 3-part block (<span class="m">0a9ccec</span>). <b>Open item:</b> <code>_PILOT_ANTORA_RESPONSES</code> — pilot YAML not fully machine-readable at Agent 6 wiring. Both remain Sandelin reaction material for the Q-meeting.</div></div>
+
+  <div class="state"><span class="stb locked">Locked</span><div class="sx"><b>Layer A schema design.</b> 16 entities committed; archived at <span class="m">docs/architecture/playbook_schemas.md</span>. COEXIST decision (antora_response vs accept_modifications / reject_thresholds) keyboard-verified.</div></div>
+
+  <div class="state"><span class="stb locked">Locked</span><div class="sx"><b>PR #1 — Phase 1 milestone.</b> <span class="m">github.com/vincentcalianno-prog/AgentOS/pull/1</span> finalized May 27 as the Phase 1 foundation marker. Branch has since advanced (HEAD <span class="m">4f90cff</span>, 470 tests) — treat PR #1 as the Phase 1 boundary artifact, not a live merge target.</div></div>
+
+  <div class="state"><span class="stb blocked">Blocked</span><div class="sx"><b>Layer B loaders &amp; resolver + live adapters.</b> <span class="m">playbook_loader</span>, <span class="m">skill_loader</span>, <span class="m">prompt_registry</span>, overlay resolution engine (Phase 2a); Drive / Gmail / Slack / Anthropic SDK (Phase 2a–2d). <b>Hard-blocked on the Sandelin IP/confidentiality conversation — still not scheduled.</b> Agenda = wiring-plan §9 + Q1–Q9.</div></div>
+
+  <div class="state"><span class="stb pending">Pending</span><div class="sx"><b>Sandelin meeting — Q1–Q9.</b> Still unsent and still the longest lead time — send outreach first. 30-min ask; bring schema doc, this v5 snapshot, both pilot entries. Q5/Q6 (IP/API confidentiality + work-product IP) may need ontology/code changes, not just policy. Q8/Q9 are the template conflicts that gate Cluster B/D authoring.</div></div>
+
+  <div class="state"><span class="stb pending">Pending</span><div class="sx"><b>Layer C Antora content — Sprint 1.</b> Started: <span class="m">mepa.delivery.ddp_terms</span> committed. Queue: <span class="m">risk_of_loss</span> → <span class="m">inspection_acceptance</span> → <span class="m">payment.net_terms</span> (Net-90 real / Net-30 baseline). ~102 MEPA+MPA clauses total, clustered A/B/C/D; MEPA §2 is the current target. dispute_resolution.* and mpa.* remain gated on Q8/Q9.</div></div>
+
+  <div class="state"><span class="stb pending">Pending</span><div class="sx"><b>Workflow #2 evaluation.</b> DNA/cells extraction candidates (Agents 1, 2, 7) await byte-for-byte duplication evidence from workflow #2. Do not extract speculatively. Recommended sequence: Sandelin IP conversation → substrate design doc → workflow #2 build → substrate extraction from real evidence.</div></div>
+
+  <div class="state"><span class="stb pending">Pending</span><div class="sx"><b>Learning loop infrastructure.</b> Pattern extractor, shared learning registry, abstraction pipeline. Phase 3+ execution. Schema designed now (<code>outcome_log</code> + <code>abstraction_status</code> + <code>RecommendationReview</code>). Architecture validated; build deferred.</div></div>
+
+  <div class="gate-co"><b>Hard gate — Phase 2a:</b> the Sandelin IP/confidentiality conversation is still not scheduled. It blocks sending contract text to the Anthropic API; NDA-only ingestion is enforced by <span class="m">clearance.yaml</span>. MEPA/MPA content is gated. Send outreach first — longest lead time, and the one item that has not moved across sessions.</div>
+
+  <div class="adr-co"><b>ADR pending — EVENT_NEGOTIATION_FAILED:</b> uses workflow-specific vocab in platform code. Option C recommended: ship + document as an ADR, resolve at workflow #2. Write an ADR (forcing function), not an inline comment. Do not rename mid-session.</div>
+
+  <p class="closing">Next session: send the Sandelin Q1–Q9 outreach (longest lead time) → continue Sprint 1 authoring (<span class="m">risk_of_loss</span> → <span class="m">inspection_acceptance</span> → <span class="m">payment.net_terms</span>) → save this v5 snapshot to <span class="m">docs/architecture/</span> → resolve <code>_PILOT_ANTORA_RESPONSES</code>. Sandelin outreach has the longest lead time — send first.</p>
+
+  <footer>
+    <span>Vincent Calianno · Antora Energy</span>
+    <span>ACP Phase 2 · Snapshot v5</span>
+    <span>31 May 2026</span>
+  </footer>
+
+</div>
+</body>
+</html>
