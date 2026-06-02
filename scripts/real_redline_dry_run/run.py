@@ -788,8 +788,12 @@ _EXPECTED_ARTIFACTS = [
 ]
 
 
-def smoke_test(out_dir: Path) -> bool:
-    """Check that all expected artifacts exist. Returns True if all present."""
+def smoke_test(out_dir: Path, llm_mode: str = "stub") -> bool:
+    """Check that all expected artifacts exist. Returns True if all present.
+
+    For llm_mode="real", also verifies the LRS document was not truncated by
+    reading stop_reason from lrs_v1_metadata.json.
+    """
     print("\n[6/7] Smoke test — checking expected artifacts...")
     all_ok = True
     for name in _EXPECTED_ARTIFACTS:
@@ -808,6 +812,28 @@ def smoke_test(out_dir: Path) -> bool:
     else:
         print("  ✗  lrs_v1.md  — MISSING (LRS document not produced)")
         all_ok = False
+
+    # Real-LLM completeness check: fail loudly if LRS was cut off at token limit
+    if llm_mode == "real":
+        meta_path = out_dir / "lrs_v1_metadata.json"
+        if meta_path.exists():
+            try:
+                meta = json.loads(meta_path.read_text())
+                if meta.get("truncated") or meta.get("stop_reason") == "max_tokens":
+                    print(
+                        "  ✗  lrs_v1_metadata.json — LRS TRUNCATED (stop_reason=max_tokens) "
+                        "— raise _MAX_TOKENS_LRS in llm_anthropic.py"
+                    )
+                    all_ok = False
+                else:
+                    stop = meta.get("stop_reason", "?")
+                    print(f"  ✓  lrs_v1_metadata.json — LRS complete (stop_reason={stop})")
+            except (json.JSONDecodeError, OSError) as exc:
+                print(f"  ✗  lrs_v1_metadata.json — could not read: {exc}")
+                all_ok = False
+        else:
+            print("  ✗  lrs_v1_metadata.json — MISSING (cannot verify LRS completeness)")
+            all_ok = False
 
     return all_ok
 
@@ -999,7 +1025,7 @@ def main() -> int:
         llm_mode=args.llm,
     )
 
-    ok = smoke_test(out_dir)
+    ok = smoke_test(out_dir, llm_mode=args.llm)
 
     print(f"\n[7/7] Done. Duration: {manifest['duration_ms']}ms")
     print(f"      Output directory: {out_dir}")

@@ -26,6 +26,12 @@ from typing import Any, Optional
 
 _DEFAULT_MODEL = "claude-sonnet-4-6"
 
+# Token limits — tunable per call type.
+# Increase _MAX_TOKENS_LRS if the LRS document truncates (stop_reason == "max_tokens").
+_MAX_TOKENS_ANALYZE = 1024
+_MAX_TOKENS_DRAFT = 1024
+_MAX_TOKENS_LRS = 8192
+
 
 # ---------------------------------------------------------------------------
 # SDK bootstrap (lazy so tests that import this module don't require the SDK)
@@ -52,8 +58,12 @@ def _get_model() -> str:
     return os.environ.get("ACP_LLM_MODEL", _DEFAULT_MODEL)
 
 
-def _call_llm(client: Any, system: str, user: str, max_tokens: int = 1024) -> str:
-    """Single non-streaming call. Returns the text of the first content block."""
+def _call_llm(client: Any, system: str, user: str, max_tokens: int = 1024) -> tuple[str, str]:
+    """Single non-streaming call. Returns (text, stop_reason).
+
+    stop_reason is the Anthropic API stop_reason string (e.g. "end_turn", "max_tokens").
+    Callers that care about completeness should check stop_reason == "max_tokens".
+    """
     import anthropic  # type: ignore[import]
     model = _get_model()
     try:
@@ -70,7 +80,7 @@ def _call_llm(client: Any, system: str, user: str, max_tokens: int = 1024) -> st
             f"Model '{model}' not found. "
             f"Set ACP_LLM_MODEL to a valid model ID: {exc}"
         ) from exc
-    return response.content[0].text
+    return response.content[0].text, response.stop_reason
 
 
 def _parse_json_response(text: str) -> dict:
@@ -210,7 +220,7 @@ def make_real_analyze_clause(
                     for m in (entry.accept_modifications or [])
                 ],
             )
-            raw = _call_llm(client, _ANALYZE_SYSTEM, user_prompt)
+            raw, _stop = _call_llm(client, _ANALYZE_SYSTEM, user_prompt, max_tokens=_MAX_TOKENS_ANALYZE)
             try:
                 parsed = _parse_json_response(raw)
             except (json.JSONDecodeError, KeyError, IndexError):
@@ -256,7 +266,7 @@ def make_real_analyze_clause(
                     reject_thresholds=[],
                     accept_modifications=[],
                 )
-                raw = _call_llm(client, _ANALYZE_SYSTEM, user_prompt)
+                raw, _stop = _call_llm(client, _ANALYZE_SYSTEM, user_prompt, max_tokens=_MAX_TOKENS_ANALYZE)
                 try:
                     parsed = _parse_json_response(raw)
                 except (json.JSONDecodeError, KeyError, IndexError):
@@ -296,7 +306,7 @@ def make_real_analyze_clause(
             reject_thresholds=[],
             accept_modifications=[],
         )
-        raw = _call_llm(client, _ANALYZE_SYSTEM, user_prompt)
+        raw, _stop = _call_llm(client, _ANALYZE_SYSTEM, user_prompt, max_tokens=_MAX_TOKENS_ANALYZE)
         try:
             parsed = _parse_json_response(raw)
         except (json.JSONDecodeError, KeyError, IndexError):
@@ -400,7 +410,7 @@ def make_real_draft_counter_proposal():
             counterparty_text or "(not provided)",
         ])
 
-        raw = _call_llm(client, _DRAFT_SYSTEM, user_prompt)
+        raw, _stop = _call_llm(client, _DRAFT_SYSTEM, user_prompt, max_tokens=_MAX_TOKENS_DRAFT)
         try:
             parsed = _parse_json_response(raw)
         except (json.JSONDecodeError, KeyError, IndexError):
@@ -508,7 +518,14 @@ def make_real_render_lrs():
                     f"  Counter-proposal: {(draft.get('counter_text') or '')[:400]}"
                 )
 
-        raw = _call_llm(client, _LRS_SYSTEM, "\n".join(user_lines), max_tokens=2048)
+        raw, stop_reason = _call_llm(
+            client, _LRS_SYSTEM, "\n".join(user_lines), max_tokens=_MAX_TOKENS_LRS
+        )
+        if stop_reason == "max_tokens":
+            raise RuntimeError(
+                f"LRS document truncated (stop_reason=max_tokens, limit={_MAX_TOKENS_LRS}). "
+                "Raise _MAX_TOKENS_LRS in llm_anthropic.py or render the LRS in sections."
+            )
 
         return LRSOutput(
             document_bytes=raw.encode(),
@@ -517,6 +534,8 @@ def make_real_render_lrs():
                 "renderer": "real-llm",
                 "model": _get_model(),
                 "clause_count": len(changed),
+                "stop_reason": stop_reason,
+                "truncated": stop_reason == "max_tokens",
             },
         )
 
