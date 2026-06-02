@@ -182,9 +182,10 @@ class PlaybookEntry:
     accept_modifications: List[AcceptModification] = field(default_factory=list)
     reject_thresholds: List[RejectThreshold] = field(default_factory=list)
     negotiability: str = ""
-    # Enforced enum (validated at load time in PlaybookLoader._parse_entry):
+    # Closed enum — canonical vocabulary: docs/architecture/ontology.md §6 (Negotiability Tiers).
+    # Validated at load time by PlaybookLoader._parse_entry (_VALID_NEGOTIABILITY).
     # "signature_blocker" — firm walk-away; any modification is a deal-breaker
-    # "parametric"        — structure fixed, specific values flex within constraints
+    # "parametric"        — structure fixed, values flex within defined constraints
     # "negotiable"        — open to substantive changes within playbook guardrails
     # "boilerplate"       — standard language; accept counterparty style edits
     constraints: dict = field(default_factory=dict)

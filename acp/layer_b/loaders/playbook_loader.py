@@ -42,12 +42,13 @@ class PlaybookLoadError(Exception):
 # Negotiability vocabulary — enforced at load time
 # ---------------------------------------------------------------------------
 
-# Non-empty negotiability values that are valid per the locked schema enum.
-# Empty string is permitted (entry has no negotiability set).
-# Any other non-empty value raises PlaybookLoadError so drift is caught early.
+# Closed set of valid negotiability values.
+# Canonical vocabulary: docs/architecture/ontology.md §6 (Negotiability Tiers).
+# Empty string is permitted for entries not yet assigned a tier (draft state).
+# Any non-empty value outside this set raises PlaybookLoadError at load time.
 _VALID_NEGOTIABILITY: frozenset[str] = frozenset({
     "signature_blocker",  # firm walk-away; any modification is a deal-breaker
-    "parametric",         # structure fixed, specific values flex within constraints
+    "parametric",         # structure fixed, values flex within defined constraints
     "negotiable",         # open to substantive changes within playbook guardrails
     "boilerplate",        # standard language; accept counterparty style edits
 })

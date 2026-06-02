@@ -20,8 +20,8 @@ This document locks the identifier taxonomy before Sprint 1 mass playbook author
 - `docs/layer_c_wiring_plan.md` — playbook structure, skill taxonomy
 - `docs/PROJECT_CONTEXT.md` — phase roadmap, Sprint 1 targets
 
-**Locked sections:** Entry ID format (§2), Contract Types (§3), Category Taxonomy (§4), Sub-Clause Naming Rules (§5).  
-**Reference sections:** Cross-Clause Dependency Rules (§6), Overlay Axis Rules (§7), Sprint 1 Authoring Sequence (§8).
+**Locked sections:** Entry ID format (§2), Contract Types (§3), Category Taxonomy (§4), Sub-Clause Naming Rules (§5), Negotiability Tiers (§6).  
+**Reference sections:** Cross-Clause Dependency Rules (§7), Overlay Axis Rules (§8), Sprint 1 Authoring Sequence (§9).
 
 ---
 
@@ -193,7 +193,7 @@ Sub-clause IDs are the third segment of the entry ID. They name the specific com
 
 ### Planned sub-clause IDs for Sprint 1 (not yet authored)
 
-These are reserved identifiers derived from the authoring sequence in §8. Do not use these strings for a different commercial issue.
+These are reserved identifiers derived from the authoring sequence in §9. Do not use these strings for a different commercial issue.
 
 | Planned entry ID | Commercial issue |
 |---|---|
@@ -210,7 +210,33 @@ These are reserved identifiers derived from the authoring sequence in §8. Do no
 
 ---
 
-## 6. Cross-Clause Dependency Rules
+## 6. Negotiability Tiers
+
+The `negotiability` field on `PlaybookEntry` declares how firmly the operator holds its
+position on a clause. It governs how Agent 5 (Redline Analysis) and Agent 6
+(Counter-Proposal Drafting) respond to counterparty redlines.
+
+**This is a closed set.** Only the four values below are valid. Enforced at load time in
+`acp/layer_b/loaders/playbook_loader.py` (`_VALID_NEGOTIABILITY`). This ontology section
+is the canonical vocabulary reference; the loader is the runtime enforcement point.
+
+| Value | Semantics | Agent response |
+|---|---|---|
+| `signature_blocker` | Firm walk-away; any modification is a deal-breaker | Reject, flag as signature-blocker, restore baseline verbatim |
+| `parametric` | Position/structure fixed, values flex within defined constraints | Accept within constraint range; counter outside it |
+| `negotiable` | Substantive position, will move within playbook guardrails | Produce counter-language toward the guardrails |
+| `boilerplate` | Standard/administrative language, no substantive position | Accept reasonable style edits without escalation |
+
+### Authoring rules
+
+- Assign a `negotiability` tier to every new `PlaybookEntry` at authoring time. Do not leave the field empty in committed entries.
+- `signature_blocker` designations require explicit justification in `defend_baseline.guidance` and at least one `reject_threshold` entry.
+- `parametric` entries must populate `constraints` with at least one key defining the acceptable range.
+- Tiers are assigned per entry, not per category. Two entries in the same category can hold different tiers (e.g., `mepa.delivery.risk_of_loss` is `signature_blocker` while `mepa.delivery.ddp_terms` is `parametric`).
+
+---
+
+## 7. Cross-Clause Dependency Rules
 
 ### When to create a CrossClauseDependency
 
@@ -242,7 +268,7 @@ Create a `CrossClauseDependency` when two or more `PlaybookEntry` instances inte
 
 ---
 
-## 7. Overlay Axis Rules
+## 8. Overlay Axis Rules
 
 Three overlay axes are hardcoded: `counterparty`, `project`, `commodity`.
 
@@ -266,7 +292,7 @@ A fourth axis is deferred. Do not add one until Sprint 1 authoring produces evid
 
 ---
 
-## 8. Sprint 1 Authoring Sequence
+## 9. Sprint 1 Authoring Sequence
 
 Recommended authoring order after the two committed pilot entries. Clusters are ordered by negotiation frequency — delivery clauses are redlined in nearly every MEPA; general/admin clauses are rarely contested.
 
@@ -321,8 +347,9 @@ Recommended authoring order after the two committed pilot entries. Clusters are 
 
 ---
 
-## 9. Revision History
+## 10. Revision History
 
 | Date | Change | Author |
 |---|---|---|
 | 2026-05-31 | Initial lock — derived from pilot entries, schema, harness patterns, wiring plan | Claude Code session |
+| 2026-06-01 | Add §6 Negotiability Tiers — canonical 4-tier closed set approved by Vincent; renumber §6–§9 → §7–§10 | Claude Code session |
