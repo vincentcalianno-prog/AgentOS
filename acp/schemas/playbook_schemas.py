@@ -207,3 +207,49 @@ class PlaybookEntry:
     # Tier-2 evidence: reviewer redline feedback on agent recommendations.
     # Feeds learning Flow 2 (within-deployment calibration).
     # abstraction_status prevents double-processing.
+
+
+# ---------------------------------------------------------------------------
+# Overlay — tightening delta applied by the resolver
+# ---------------------------------------------------------------------------
+
+@dataclass
+class Overlay:
+    """A tightening delta applied to a PlaybookEntry for a specific context.
+
+    Overlays are authored in Layer C and applied by the OverlayResolver.
+    Tightening only: add reject thresholds, remove acceptable modifications,
+    or raise numeric constraints — never the reverse.
+
+    overlay_type values: "counterparty" | "project" | "commodity"
+    An empty entry_id means the overlay applies to any entry passed to the
+    resolver (caller is responsible for filtering before calling resolve()).
+    """
+    overlay_id: str = ""
+    overlay_type: str = ""
+    entry_id: str = ""
+    # The PlaybookEntry.id this overlay targets; empty = caller-filtered
+    add_reject_thresholds: List[RejectThreshold] = field(default_factory=list)
+    # Additional thresholds — unioned with the base entry's reject_thresholds
+    remove_accept_modification_ids: List[str] = field(default_factory=list)
+    # AcceptModification.id values to remove (position tightening)
+    constraint_overrides: dict = field(default_factory=dict)
+    # Constraint overrides — max-wins per numeric key (higher = tighter minimum)
+
+
+# ---------------------------------------------------------------------------
+# ResolutionResult — output of the overlay resolver
+# ---------------------------------------------------------------------------
+
+@dataclass
+class ResolutionResult:
+    """The resolved PlaybookEntry after overlay application, with full provenance."""
+    entry_id: str = ""
+    resolved_entry: Optional[PlaybookEntry] = None
+    provenance: List[str] = field(default_factory=list)
+    # Ordered provenance tokens tracing each change:
+    # "baseline:<entry_id>"
+    # "overlay:<type>:<overlay_id> → add_reject_threshold:<id>"
+    # "rule:max_wins:<key>=<new> (was <prior>) via overlay:<type>:<id>"
+    # "overlay:<type>:<overlay_id> → remove_accept_modification:<id>"
+    # "overlay:<type>:<overlay_id> → override_constraint:<key>"
