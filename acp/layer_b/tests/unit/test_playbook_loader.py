@@ -356,6 +356,25 @@ class TestPlaybookLoaderErrorCases(unittest.TestCase):
             self.assertIsNotNone(entry)
             self.assertEqual(entry.constraints, {})
 
+    def test_invalid_negotiability_raises_playbook_load_error(self):
+        yaml_content = _MINIMAL_YAML + "negotiability: unknown-tier\n"
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _write(root, "playbook/e.yaml", yaml_content)
+            loader = PlaybookLoader(root)
+            with self.assertRaises(PlaybookLoadError):
+                loader.load_all()
+
+    def test_empty_negotiability_does_not_raise(self):
+        # Minimal YAML has no negotiability key → empty string → should not raise.
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _write(root, "playbook/e.yaml", _MINIMAL_YAML)
+            loader = PlaybookLoader(root)
+            entry = loader.get("generic.delivery.delivery_terms")
+            self.assertIsNotNone(entry)
+            self.assertEqual(entry.negotiability, "")
+
 
 class TestPlaybookLoaderIdempotent(unittest.TestCase):
     """load_all() called multiple times returns the same results."""
@@ -400,6 +419,15 @@ class TestPlaybookLoaderRealDeployment(unittest.TestCase):
                 entry.evidence_tier,
                 valid_tiers,
                 f"entry {entry.id} has unexpected evidence_tier: {entry.evidence_tier!r}",
+            )
+
+    def test_all_entries_have_valid_negotiability(self):
+        valid_negotiability = {"boilerplate", "parametric", "negotiable", "signature_blocker"}
+        for entry in self.entries.values():
+            self.assertIn(
+                entry.negotiability,
+                valid_negotiability,
+                f"entry {entry.id} has unexpected negotiability: {entry.negotiability!r}",
             )
 
     def test_all_entries_have_at_least_one_reject_threshold(self):

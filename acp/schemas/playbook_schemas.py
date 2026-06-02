@@ -182,7 +182,11 @@ class PlaybookEntry:
     accept_modifications: List[AcceptModification] = field(default_factory=list)
     reject_thresholds: List[RejectThreshold] = field(default_factory=list)
     negotiability: str = ""
-    # "signature_blocker" | "parametric" | "flexible"
+    # Enforced enum (validated at load time in PlaybookLoader._parse_entry):
+    # "signature_blocker" — firm walk-away; any modification is a deal-breaker
+    # "parametric"        — structure fixed, specific values flex within constraints
+    # "negotiable"        — open to substantive changes within playbook guardrails
+    # "boilerplate"       — standard language; accept counterparty style edits
     constraints: dict = field(default_factory=dict)
     pending_items: List[str] = field(default_factory=list)
     examples: List[str] = field(default_factory=list)

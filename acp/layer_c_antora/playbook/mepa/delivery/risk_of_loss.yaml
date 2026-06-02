@@ -14,7 +14,7 @@ defend_baseline:
     retains both title and risk until delivery is complete at the
     named destination. No split transfer constructs are acceptable.
 
-negotiability: non-negotiable
+negotiability: signature_blocker
 
 evidence_tier: provisional
 review_status: draft

@@ -39,6 +39,21 @@ class PlaybookLoadError(Exception):
 
 
 # ---------------------------------------------------------------------------
+# Negotiability vocabulary — enforced at load time
+# ---------------------------------------------------------------------------
+
+# Non-empty negotiability values that are valid per the locked schema enum.
+# Empty string is permitted (entry has no negotiability set).
+# Any other non-empty value raises PlaybookLoadError so drift is caught early.
+_VALID_NEGOTIABILITY: frozenset[str] = frozenset({
+    "signature_blocker",  # firm walk-away; any modification is a deal-breaker
+    "parametric",         # structure fixed, specific values flex within constraints
+    "negotiable",         # open to substantive changes within playbook guardrails
+    "boilerplate",        # standard language; accept counterparty style edits
+})
+
+
+# ---------------------------------------------------------------------------
 # YAML → dataclass helpers
 # ---------------------------------------------------------------------------
 
@@ -104,12 +119,22 @@ def _parse_antora_response(data: dict) -> AntoraResponse:
 def _parse_entry(data: dict, source_path: Path) -> PlaybookEntry:
     """Parse a raw YAML mapping into a PlaybookEntry.
 
-    Raises PlaybookLoadError when the required 'id' field is absent or empty.
+    Raises PlaybookLoadError when:
+    - The required 'id' field is absent or empty.
+    - The 'negotiability' field is set to an unrecognised value (empty is allowed).
     """
     entry_id = _str(data.get("id"))
     if not entry_id:
         raise PlaybookLoadError(
             f"PlaybookEntry missing required 'id' field: {source_path}"
+        )
+
+    negotiability = _str(data.get("negotiability"))
+    if negotiability and negotiability not in _VALID_NEGOTIABILITY:
+        raise PlaybookLoadError(
+            f"PlaybookEntry '{entry_id}' has unrecognised negotiability "
+            f"'{negotiability}' in {source_path}. "
+            f"Valid values: {sorted(_VALID_NEGOTIABILITY)}"
         )
 
     raw_constraints = data.get("constraints")
@@ -136,7 +161,7 @@ def _parse_entry(data: dict, source_path: Path) -> PlaybookEntry:
             _parse_reject_threshold(t)
             for t in (data.get("reject_thresholds") or [])
         ],
-        negotiability=_str(data.get("negotiability")),
+        negotiability=negotiability,
         constraints=constraints,
         pending_items=list(data.get("pending_items") or []),
         examples=list(data.get("examples") or []),

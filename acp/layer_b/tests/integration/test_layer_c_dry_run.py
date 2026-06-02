@@ -111,7 +111,7 @@ def _make_playbook_analyzer(
         if entry is not None:
             resolved = resolver.resolve(entry, [])
             re = resolved.resolved_entry
-            non_negotiable = re.negotiability == "non-negotiable"
+            non_negotiable = re.negotiability == "signature_blocker"
             return ClauseRecommendation(
                 clause_reference=clause_reference,
                 recommendation="reject" if non_negotiable else "negotiate",
@@ -237,7 +237,7 @@ _SYNTHETIC_DIFF: dict = {
 }
 
 _PLAYBOOK_REFS = {"2.3", "2.4", "2.5", "3.2"}
-_NON_NEGOTIABLE_REF = "2.4"  # negotiability == "non-negotiable" in the real YAML
+_SIGNATURE_BLOCKER_REF = "2.4"  # negotiability == "signature_blocker" in the real YAML
 
 
 # ---------------------------------------------------------------------------
@@ -370,20 +370,20 @@ class LayerCDryRunIntegrationTest(unittest.TestCase):
         self.assertFalse(recs["9.1"]["playbook_grounded"])
         self.assertIsNone(recs["9.1"]["evidence_source"])
 
-    def test_non_negotiable_clause_is_signature_blocker(self):
-        """The non-negotiable clause is flagged as a signature blocker."""
+    def test_signature_blocker_clause_sets_is_signature_blocker(self):
+        """The signature_blocker negotiability clause is flagged as is_signature_blocker=True."""
         self._fire_diff_complete()
         recs = {r["clause_reference"]: r for r in self._read_analysis()["recommendations"]}
         self.assertTrue(
-            recs[_NON_NEGOTIABLE_REF]["is_signature_blocker"],
-            f"clause {_NON_NEGOTIABLE_REF} should be is_signature_blocker=True",
+            recs[_SIGNATURE_BLOCKER_REF]["is_signature_blocker"],
+            f"clause {_SIGNATURE_BLOCKER_REF} should be is_signature_blocker=True",
         )
 
-    def test_non_negotiable_clause_has_reject_recommendation(self):
-        """Non-negotiable clauses receive a 'reject' recommendation."""
+    def test_signature_blocker_clause_gets_reject_recommendation(self):
+        """signature_blocker entries receive a 'reject' recommendation."""
         self._fire_diff_complete()
         recs = {r["clause_reference"]: r for r in self._read_analysis()["recommendations"]}
-        self.assertEqual(recs[_NON_NEGOTIABLE_REF]["recommendation"], "reject")
+        self.assertEqual(recs[_SIGNATURE_BLOCKER_REF]["recommendation"], "reject")
 
     def test_unchanged_clause_excluded_from_analysis(self):
         """Unchanged clause 1.1 is not present in the analysis output."""

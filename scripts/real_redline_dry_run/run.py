@@ -242,9 +242,9 @@ def _stub_analyze_clause(
     3. Agent-reasoned — no playbook entry; escalate with playbook_grounded=False.
 
     Change-type rules:
-    - deleted → reject, is_signature_blocker=True for §6.x or non-negotiable entries
+    - deleted → reject, is_signature_blocker=True for §6.x or signature_blocker entries
     - added   → escalate, requires_legal_review=True
-    - modified + non-negotiable → reject with is_signature_blocker=True
+    - modified + signature_blocker → reject with is_signature_blocker=True
     - modified (other) → negotiate
     """
     # --- 1. PlaybookLoader (real Layer C YAML entries) ---
@@ -254,7 +254,7 @@ def _stub_analyze_clause(
         resolved_entry = resolved.resolved_entry
         playbook_grounded = True
         evidence_source = f"{resolved_entry.id} | {resolved_entry.evidence_tier}"
-        is_signature_blocker = resolved_entry.negotiability == "non-negotiable"
+        is_signature_blocker = resolved_entry.negotiability == "signature_blocker"
         playbook_ref = resolved_entry.id
         antora_resp: AntoraResponse | None = resolved_entry.antora_response
     else:
