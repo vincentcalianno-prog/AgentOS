@@ -49,7 +49,21 @@ STEP 4 — REGISTER + LOG + COMMIT
     - Retract: restore archive/<old filename>, or
       `git checkout <commit-before-this> -- docs/architecture/<new filename>`
 - git add docs/architecture docs/PROJECT_CONTEXT.md
-- PRE-COMMIT: python3 acp/discipline_check.py (4/4); pytest acp/layer_b/tests/ -q
+- PRE-COMMIT:
+  1. HTML guard — curly quotes inside tags must be zero:
+       python3 -c "
+       import re, sys
+       text = open('docs/architecture/acp_architecture_v<N+1>_<today>.html', encoding='utf-8').read()
+       hits = [m.group()[:80] for m in re.finditer(r'<[^>]+>', text, re.DOTALL)
+               if any(ch in m.group() for ch in '\u201c\u201d\u2018\u2019')]
+       sys.exit('\n'.join(hits) or None)
+       "
+     Fail → fix the smart-quoted attribute before committing.
+  2. Eyeball check — open the file in a browser (or Quick Look) and confirm
+     the intro paragraph and section headers render with their styled fonts/colors.
+     If the intro is unstyled plain text, a curly-quoted class attribute broke it.
+  3. python3 acp/discipline_check.py   (4/4)
+  4. python3 -m pytest acp/layer_b/tests/ -q
 - COMMIT: docs: refresh HTML reference doc(s) to current state (prior archived)
 
 DO NOT TOUCH: legal templates, inputs/, pilot_entries/, agent code, ontology.md.
