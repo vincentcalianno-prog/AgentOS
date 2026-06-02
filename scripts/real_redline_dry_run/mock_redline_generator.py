@@ -5,6 +5,9 @@ to produce a synthetic counterparty-redlined version. The output simulates the
 kind of redlined document a counterparty would send back via email.
 
 Modification patterns:
+    "delivery_ddp"            — 2.3: substitute EXW for DDP (modified)
+    "delivery_risk_of_loss"   — 2.4: transfer risk at origin loading, not destination (modified)
+    "delivery_inspection"     — 2.5: add deemed-acceptance after 5-day silence (modified)
     "payment_terms"           — 2.9: add extra liability language (accepted_with_addition)
     "payment_delay"           — 3.2: extend payment terms from net-30 to net-45 (modified)
     "termination_notice"      — 4.4: shorten termination notice from 60 to 30 days (modified)
@@ -37,6 +40,19 @@ _BASE_PATH = Path(__file__).parent / "inputs" / "sample_mepa_base.md"
 # ---------------------------------------------------------------------------
 
 _ORIGINAL_CLAUSES: dict[str, str] = {
+    "2.3": (
+        "Operator shall deliver the Energy Product to the Delivery Point at the times and "
+        "quantities specified in the applicable Transaction Confirmation, subject to Force Majeure "
+        "and Curtailment rights set forth herein."
+    ),
+    "2.4": (
+        "Counterparty shall accept and pay for all Energy Product delivered to the Delivery Point "
+        "in accordance with the applicable Transaction Confirmation."
+    ),
+    "2.5": (
+        "Each party shall perform its respective scheduling obligations under applicable tariffs "
+        "and agreements, and shall cooperate in good faith to fulfill scheduling requirements."
+    ),
     "2.9": (
         "Each party's aggregate liability under this Agreement shall be limited to direct damages only. "
         "In no event shall either party be liable for indirect, incidental, consequential, punitive, or "
@@ -78,6 +94,49 @@ _ORIGINAL_CLAUSES: dict[str, str] = {
 }
 
 _COUNTERPARTY_MODIFICATIONS: dict[str, dict] = {
+    # --- Layer C playbook-matched patterns (section_ids §2.3 / §2.4 / §2.5 / §3.2) ---
+    # These patterns exercise PlaybookLoader grounding and OverlayResolver baseline passthrough.
+    # Language is clearly synthetic and does not reflect any real counterparty position.
+    "delivery_ddp": {
+        "clause": "2.3",
+        "heading": "### 2.3 Delivery Obligations",
+        "description": (
+            "modified: counterparty substitutes EXW origin for DDP delivery-to-site"
+        ),
+        "new_text": (
+            "Equipment shall be made available for collection at Counterparty's designated "
+            "facility (EXW [Counterparty Facility], Incoterms 2020). Risk of loss and all "
+            "transportation costs from Counterparty's facility to Buyer's site shall be borne "
+            "entirely by Buyer from the point of collection."
+        ),
+    },
+    "delivery_risk_of_loss": {
+        "clause": "2.4",
+        "heading": "### 2.4 Acceptance Obligation",
+        "description": (
+            "modified: counterparty proposes risk transfer at loading, not at named destination"
+        ),
+        "new_text": (
+            "Risk of loss shall transfer to the receiving party upon loading of the Energy "
+            "Product at the originating facility. The receiving party shall arrange and bear "
+            "all costs of transportation, cargo insurance, and onward delivery from the loading "
+            "point to the Delivery Point."
+        ),
+    },
+    "delivery_inspection": {
+        "clause": "2.5",
+        "heading": "### 2.5 Scheduling",
+        "description": (
+            "modified: counterparty adds deemed-acceptance clause after 5-business-day silence"
+        ),
+        "new_text": (
+            "Each party shall perform its respective scheduling obligations under applicable "
+            "tariffs and agreements, and shall cooperate in good faith to fulfill scheduling "
+            "requirements. If the receiving party fails to issue written acceptance or written "
+            "rejection within five (5) business days of the scheduled delivery date, the "
+            "Energy Product shall be deemed accepted by the receiving party without reservation."
+        ),
+    },
     "payment_terms": {
         "clause": "2.9",
         "heading": "### 2.9 Liability Cap",

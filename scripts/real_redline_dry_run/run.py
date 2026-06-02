@@ -72,6 +72,8 @@ from acp.layer_b.core.types import (
     TenantContext,
 )
 from acp.layer_b.loaders.pilot_entry_loader import PilotEntryLoader
+from acp.layer_b.loaders.playbook_loader import PlaybookLoader
+from acp.layer_b.resolver import OverlayResolver
 from acp.schemas.playbook_schemas import (
     AcceptanceResponse,
     AntoraResponse,
@@ -83,6 +85,27 @@ from acp.schemas.playbook_schemas import (
 from acp.layer_b.tests.fixtures.synthetic_config import SYNTHETIC_CONFIG
 
 _pilot_loader = PilotEntryLoader()
+_LAYER_C_ROOT = _REPO_ROOT / "acp" / "layer_c_antora"
+_playbook_loader = PlaybookLoader(_LAYER_C_ROOT)
+_resolver = OverlayResolver()
+
+
+def _build_clause_ref_map() -> dict[str, PlaybookEntry]:
+    """Build a clause_ref → PlaybookEntry map from PlaybookLoader.
+
+    Strips the leading '§' from section_id to produce a bare clause reference
+    (e.g. '§2.3' → '2.3').  Only entries with a non-empty section_id are indexed.
+    """
+    result: dict[str, PlaybookEntry] = {}
+    for entry in _playbook_loader.load_all().values():
+        raw_section = entry.defend_baseline.template_ref.section_id
+        clause_ref = raw_section.lstrip("§").strip()
+        if clause_ref:
+            result[clause_ref] = entry
+    return result
+
+
+_CLAUSE_REF_MAP: dict[str, PlaybookEntry] = _build_clause_ref_map()
 
 
 def _load_pilot_antora_response(md_path: Path) -> AntoraResponse | None:
@@ -211,34 +234,45 @@ def _stub_analyze_clause(
     """Deterministic stub analyzer for dry-run purposes.
 
     Decision rules (no LLM):
-    - Pilot entry lookup drives playbook_grounded, evidence_source, and
-      is_signature_blocker when negotiability=="signature_blocker".
-    - deleted → reject, is_signature_blocker=True for §6.x or playbook
-      signature_blocker entries
+    1. PlaybookLoader lookup — checks real Layer C entries indexed by section_id
+       (e.g. '2.3' → mepa.delivery.ddp_terms).  OverlayResolver applied as
+       baseline passthrough (no overlays authored yet).
+    2. PilotEntryLoader fallback — legacy in-memory pilot entries for clauses
+       not yet committed as YAML playbook files.
+    3. Agent-reasoned — no playbook entry; escalate with playbook_grounded=False.
+
+    Change-type rules:
+    - deleted → reject, is_signature_blocker=True for §6.x or non-negotiable entries
     - added   → escalate, requires_legal_review=True
-    - modified + signature_blocker → reject with is_signature_blocker=True
+    - modified + non-negotiable → reject with is_signature_blocker=True
     - modified (other) → negotiate
     """
-    # Pilot entry lookup — populates playbook_grounded and evidence_source
-    pilot_ref = _pilot_loader.lookup(clause_reference)
-    playbook_grounded = pilot_ref is not None
-    evidence_source = (
-        f"{pilot_ref.entry_id} | {pilot_ref.evidence_tier} | {pilot_ref.description}"
-        if pilot_ref is not None else None
-    )
-
-    # Signature-blocker detection: §6.x indemnity heuristic OR playbook says so
-    is_signature_blocker = (
-        clause_reference.startswith("6.")
-        or (pilot_ref is not None and pilot_ref.negotiability == "signature_blocker")
-    )
-    playbook_ref = pilot_ref.entry_id if pilot_ref is not None else None
-
-    # Antora response: populated from parsed pilot entry when a pilot was matched.
-    # None for clauses with no pilot entry (agent-reasoned path in Agent 6).
-    antora_resp: AntoraResponse | None = (
-        _PILOT_ANTORA_RESPONSES.get(clause_reference) if pilot_ref is not None else None
-    )
+    # --- 1. PlaybookLoader (real Layer C YAML entries) ---
+    playbook_entry = _CLAUSE_REF_MAP.get(clause_reference)
+    if playbook_entry is not None:
+        resolved = _resolver.resolve(playbook_entry, [])
+        resolved_entry = resolved.resolved_entry
+        playbook_grounded = True
+        evidence_source = f"{resolved_entry.id} | {resolved_entry.evidence_tier}"
+        is_signature_blocker = resolved_entry.negotiability == "non-negotiable"
+        playbook_ref = resolved_entry.id
+        antora_resp: AntoraResponse | None = resolved_entry.antora_response
+    else:
+        # --- 2. PilotEntryLoader fallback ---
+        pilot_ref = _pilot_loader.lookup(clause_reference)
+        playbook_grounded = pilot_ref is not None
+        evidence_source = (
+            f"{pilot_ref.entry_id} | {pilot_ref.evidence_tier} | {pilot_ref.description}"
+            if pilot_ref is not None else None
+        )
+        is_signature_blocker = (
+            clause_reference.startswith("6.")
+            or (pilot_ref is not None and pilot_ref.negotiability == "signature_blocker")
+        )
+        playbook_ref = pilot_ref.entry_id if pilot_ref is not None else None
+        antora_resp = (
+            _PILOT_ANTORA_RESPONSES.get(clause_reference) if pilot_ref is not None else None
+        )
 
     if change_type == "deleted":
         return ClauseRecommendation(
@@ -683,6 +717,21 @@ def run_pipeline(
         f"(owner={gate_log['by_role']['owner']}, "
         f"legal={gate_log['by_role']['legal']}, "
         f"total={gate_log['total_reviews']})"
+    )
+
+    # -----------------------------------------------------------------------
+    # Summary: playbook grounding breakdown
+    # -----------------------------------------------------------------------
+    print(f"\n[ACP dry-run] Analysis summary — {len(recs)} clause(s) changed:")
+    playbook_count = sum(1 for r in recs if r.get("playbook_grounded", False))
+    reasoned_count = len(recs) - playbook_count
+    for r in recs:
+        grounded = "✓ playbook" if r.get("playbook_grounded", False) else "✗ agent-reasoned"
+        blocker = " [SIGNATURE BLOCKER]" if r.get("is_signature_blocker") else ""
+        print(f"    {r['clause_reference']:6s}  {r['recommendation']:10s}  {grounded}{blocker}")
+    print(
+        f"  Playbook-matched: {playbook_count} / {len(recs)}"
+        f"   Agent-reasoned: {reasoned_count} / {len(recs)}"
     )
 
     return manifest
