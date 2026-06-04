@@ -1,0 +1,133 @@
+id: mepa.payment.net_terms
+contract_type_id: mepa
+category_id: payment
+sub_clause_id: net_terms
+
+defend_baseline:
+  template_ref:
+    document_id: antora_mepa_template
+    section_id: "§3.2"
+    version: "v1.0"
+  guidance: >
+    Antora's template states Net-30 from invoice date. Antora's
+    actual negotiating position is Net-90. Net-45 is the floor
+    below which SCM should not agree without VP SCM approval.
+    Payment terms are measured from receipt of a conforming
+    invoice, not from delivery or acceptance.
+
+negotiability: parametric
+
+evidence_tier: provisional
+review_status: draft
+
+accept_modifications:
+  - id: net_terms.accept.milestone_based_payments
+    description: >
+      Supplier requests milestone-based payment schedule tied
+      to design completion, shipment, and delivery milestones
+      rather than a single Net-X from invoice. Acceptable
+      provided each milestone payment is Net-30 from invoice
+      for that milestone and aggregate terms are no worse
+      than Net-90 equivalent on the total contract value.
+    example_language: >
+      30% upon contract execution; 30% upon approved engineering
+      submittal; 40% Net-30 from delivery and acceptance.
+    rationale: >
+      Milestone payments are standard on capital equipment with
+      long lead times. Acceptable if the weighted average payment
+      timing is equivalent to or better than Net-90 on total
+      contract value.
+
+reject_thresholds:
+  - id: net_terms.reject.net_30_or_less
+    description: >
+      Supplier insists on Net-30 or less (Net-15, Net-10, due
+      on receipt) without a milestone structure that achieves
+      Net-90 equivalent timing.
+    example_language: >
+      "Payment due Net-30 from invoice" or "Payment due within
+      15 days of delivery"
+    rationale: >
+      Net-30 is Antora's template placeholder, not a committed
+      position. Antora's actual target is Net-90. Net-30 or
+      less is only acceptable as part of a milestone structure
+      that achieves equivalent overall timing. Reject as
+      standalone terms.
+
+  - id: net_terms.reject.payment_before_acceptance
+    description: >
+      Supplier requires final payment or a substantial payment
+      milestone before Antora's written acceptance of the
+      Equipment.
+    example_language: >
+      "Final payment due upon delivery" or "Balance due Net-30
+      from shipment"
+    rationale: >
+      Final payment must not be due before Antora's written
+      acceptance. Paying in full before acceptance eliminates
+      Antora's leverage to compel deficiency remediation.
+      Reject any construct that makes final payment due at
+      or before delivery without an acceptance condition.
+
+antora_response:
+  rejection_response:
+    rationale: >
+      Antora's standard payment terms are Net-90 from receipt
+      of a conforming invoice. Net-30 or less is not acceptable
+      as standalone terms on capital equipment procurement.
+      Payment terms must also be conditioned on receipt of
+      a conforming invoice, not on delivery or shipment.
+    counter_proposal: >
+      Payment shall be due ninety (90) days from Buyer's receipt
+      of a conforming invoice. An invoice shall be deemed
+      conforming when it references the applicable purchase
+      order number, describes the Equipment delivered, and
+      is submitted following DDP delivery to the project site.
+      Buyer reserves the right to dispute non-conforming
+      invoices within ten (10) business days of receipt.
+  compromise_response:
+    conditions: >
+      Net-45 is the floor — do not go below without VP SCM
+      approval. Net-60 is an acceptable landing point for
+      suppliers where relationship or market position warrants.
+      Any compromise must still condition payment on receipt
+      of a conforming invoice, not on shipment or delivery alone.
+    revised_language: >
+      Payment shall be due [45/60] days from Buyer's receipt
+      of a conforming invoice referencing the applicable
+      purchase order. Buyer reserves the right to dispute
+      non-conforming invoices within ten (10) business days
+      of receipt.
+  acceptance_response:
+    rationale: >
+      Supplier's proposed terms are Net-90 or better from
+      receipt of a conforming invoice with no pre-acceptance
+      final payment requirement. Antora's target position
+      is achieved.
+
+constraints:
+  template_terms: "Net-30"
+  target_terms: "Net-90"
+  floor_terms: "Net-45"
+  floor_approval_required: "VP SCM"
+  invoice_dispute_window_business_days: 10
+
+pending_items:
+  - "Confirm template section reference (§3.2 assumed — verify
+     against antora_mepa_template v1.0)"
+  - "Confirm Net-45 floor approval authority is VP SCM
+     (Ranjeet) not SCM manager"
+  - "First executed MEPA with net_terms clause upgrades
+     evidence_tier to Tier 1"
+  - "MCM PO T&Cs closure (May 6) — confirm what payment terms
+     were agreed and whether they feed Tier 1 evidence here"
+
+related_entries:
+  - mepa.payment.invoicing_requirements
+  - mepa.payment.late_payment_interest
+  - mepa.delivery.inspection_acceptance
+
+examples:
+  - "MCM Engineering PO T&Cs (closed May 6): confirm final
+     payment terms agreed — potential Tier 1 anchor for this
+     entry if Net-45+ was accepted."

@@ -13,6 +13,30 @@ AgentOS is a centralized repository that:
 Claude reads this registry at the start of every agent-building session,
 ensuring all agents are unified in thought and design.
 
+## Development Setup (ACP)
+
+The `acp/` directory contains the Agent Contract Platform sub-project with a full
+Python test suite. Requirements: **Python 3.12+**.
+
+```bash
+git clone <repo-url>
+cd AgentOS
+make setup    # creates .venv, installs deps
+make check    # runs 409 tests + discipline check — both must be green
+```
+
+Individual targets:
+
+| Target | What it does |
+|--------|-------------|
+| `make setup` | Creates `.venv` with Python 3.12, installs `requirements-dev.txt` and the `acp` package in editable mode |
+| `make test` | Runs the full Layer B test suite via pytest |
+| `make discipline` | Runs `acp/discipline_check.py` (Layer A/B/C naming and boundary rules) |
+| `make check` | Runs `test` + `discipline` — the pre-commit gate |
+| `make clean` | Removes `.venv` and all `__pycache__` / `.pytest_cache` trees |
+
+> **pyenv users:** A `.python-version` file pinning `3.12` is at the repo root.
+
 ## Structure
 
 ```

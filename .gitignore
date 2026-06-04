@@ -1,0 +1,43 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+
+# Virtual environments
+venv/
+env/
+.venv/
+
+# IDE / editors
+.vscode/
+.idea/
+*.swp
+.DS_Store
+
+# Local databases (SQLite from tests)
+*.db
+*.sqlite
+*.sqlite3
+
+# Local secrets / credentials
+.env
+*.env
+credentials.json
+token.json
+service_account.json
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Dry-run harness outputs (timestamped run directories)
+scripts/real_redline_dry_run/outputs/*/
+scripts/report_triage_dry_run/outputs/*/
+
+# Workflow #2 — real report fixtures (never commit)
+tests/fixtures/report_triage/real/

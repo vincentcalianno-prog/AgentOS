@@ -1,0 +1,124 @@
+id: mepa.delivery.ddp_terms
+contract_type_id: mepa
+category_id: delivery
+sub_clause_id: ddp_terms
+
+defend_baseline:
+  template_ref:
+    document_id: antora_mepa_template
+    section_id: "§2.3"
+    version: "v1.0"
+  guidance: >
+    Antora's standard is DDP (Delivered Duty Paid) to the project
+    site. Supplier bears all delivery costs, import duties, customs
+    clearance, and risk of loss until delivery is complete at the
+    named destination. Incoterms 2020 DDP applies. Supplier is
+    responsible for obtaining any export licenses required.
+
+negotiability: parametric
+
+evidence_tier: provisional
+review_status: draft
+
+accept_modifications:
+  - id: ddp_terms.accept.delivery_schedule_adjustment
+    description: >
+      Supplier requests revised delivery schedule with written
+      notice and reasonable justification. Acceptable if minimum
+      notice period (30 days) is preserved and revised date
+      is confirmed in writing.
+    example_language: >
+      Supplier shall provide no less than thirty (30) days
+      prior written notice of any change to the delivery
+      schedule, together with a revised delivery date.
+    rationale: >
+      Schedule adjustments are commercial reality on capital
+      equipment. Acceptable with adequate notice and written
+      confirmation.
+
+reject_thresholds:
+  - id: ddp_terms.reject.exw_or_fob
+    description: >
+      Supplier attempts to substitute EXW, FCA, or FOB for DDP.
+      Any Incoterm that transfers risk before arrival at Antora's
+      project site must be rejected.
+    example_language: >
+      "EXW [supplier facility]" or "FOB [port of origin]" or
+      "FCA [named place]"
+    rationale: >
+      Antora bears project schedule risk on capital equipment.
+      Transferring delivery risk to Antora before site arrival
+      creates uninsured exposure during transit. DDP is
+      non-negotiable on BOP equipment.
+
+  - id: ddp_terms.reject.duty_passthrough
+    description: >
+      Supplier attempts to pass through import duties, tariffs,
+      or customs costs to Antora as a separate line item or
+      price adjustment mechanism.
+    example_language: >
+      "plus any applicable import duties, tariffs, or customs
+      charges" or "subject to tariff adjustment clause"
+    rationale: >
+      DDP means supplier absorbs all duties. Any tariff
+      passthrough converts DDP to DAP or DDP-minus and must
+      be rejected.
+      # TODO: Confirm whether IEEPA-specific tariff passthrough
+      # language requires a separate reject threshold entry or
+      # whether this threshold covers it. Flag any duty passthrough
+      # language to Ranjeet immediately pending that confirmation.
+
+antora_response:
+  rejection_response:
+    rationale: >
+      Antora's standard is DDP to the project site per Incoterms
+      2020. Antora cannot accept delivery risk prior to arrival
+      at the named destination. On BOP equipment with critical
+      path schedule implications, uninsured transit risk is not
+      acceptable.
+    counter_proposal: >
+      The parties agree that delivery shall be DDP [project site
+      address] per Incoterms 2020. Supplier shall bear all costs
+      and risks associated with delivery, including export
+      clearance, freight, insurance, import duties, and customs
+      clearance, until the Equipment is delivered to the named
+      destination.
+  compromise_response:
+    conditions: >
+      Acceptable only where a specific commodity has a
+      well-established freight market and Antora's logistics
+      team has confirmed they can manage the transit leg more
+      cost-effectively than the supplier. Requires explicit
+      approval from SCM manager. Never acceptable on
+      transformers, switchgear, or E-House equipment.
+    revised_language: >
+      Delivery shall be [DAP/CPT] [project site]. Risk transfers
+      to Buyer upon delivery at named destination. Seller shall
+      obtain and maintain cargo insurance in an amount not less
+      than 110% of the Equipment value through the point of
+      risk transfer.
+  acceptance_response:
+    rationale: >
+      Supplier's proposed language preserves DDP to the project
+      site with Incoterms 2020 and does not alter the risk
+      transfer point or create any duty passthrough mechanism.
+      Antora's baseline position is preserved.
+
+constraints:
+  minimum_notice_days: 30
+
+pending_items:
+  - "TODO: Confirm DDP destination format convention with Ranjeet
+     (e.g. 'DDP Pratt KS' vs full address)"
+  - "TODO: Confirm IEEPA tariff passthrough coverage — see
+     reject_thresholds.duty_passthrough rationale note"
+  - "First executed MEPA with DDP clause upgrades evidence_tier to Tier 1"
+
+related_entries:
+  - mepa.delivery.risk_of_loss
+  - mepa.delivery.inspection_acceptance
+
+examples:
+  - "Pratt Project (PRA1-XFMR-002): DDP Pratt KS confirmed in
+     PO for 20MVA E-Boiler transformer, $681,900, 22-week ARO.
+     Real-world anchor for this entry."

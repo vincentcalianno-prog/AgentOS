@@ -1,0 +1,313 @@
+"""SQLite-backed ledger adapter for local development and testing.
+
+This adapter lives in layer_b because it operates only on synthetic data and
+is used by the test suite. It contains no deployment-specific values.
+
+Tables:
+    negotiations(tenant_id, negotiation_id, ...all NegotiationRow fields)
+    event_retries(retry_id, ...all EventRetryRow fields)
+
+PRIMARY KEY for negotiations is (tenant_id, negotiation_id). Cross-tenant
+uniqueness of negotiation_id is also enforced at the application layer through
+get_owner(). PRIMARY KEY for event_retries is retry_id (globally unique UUID).
+"""
+
+from __future__ import annotations
+
+import json
+import sqlite3
+import threading
+from datetime import datetime
+from typing import Optional
+
+from acp.layer_b.core.adapters.ledger_adapter import LedgerAdapter
+from acp.layer_b.core.types import EventRetryRow, NegotiationRow, NegotiationState
+
+
+_SCHEMA = """
+CREATE TABLE IF NOT EXISTS negotiations (
+    tenant_id TEXT NOT NULL,
+    negotiation_id TEXT NOT NULL,
+    row_number INTEGER NOT NULL,
+    owner TEXT NOT NULL,
+    workflow_id TEXT NOT NULL,
+    category TEXT,
+    priority TEXT,
+    counterparty_description TEXT,
+    whos_court TEXT,
+    status TEXT NOT NULL,
+    comments TEXT,
+    action_next_steps TEXT,
+    contract_type TEXT,
+    round_number INTEGER NOT NULL DEFAULT 0,
+    last_outbound_version_sent TEXT,
+    last_counterparty_version TEXT,
+    last_activity_date TEXT,
+    inbox_thread_id TEXT,
+    storage_folder_path TEXT,
+    review_package_status TEXT,
+    counterparty_profile_ref TEXT,
+    last_review_package_sent_date TEXT,
+    automation_status TEXT NOT NULL DEFAULT 'Manual Only',
+    audit_log_ref TEXT,
+    PRIMARY KEY (tenant_id, negotiation_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_negotiations_by_id ON negotiations(negotiation_id);
+CREATE INDEX IF NOT EXISTS idx_negotiations_by_tenant ON negotiations(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_negotiations_by_thread ON negotiations(tenant_id, inbox_thread_id);
+
+CREATE TABLE IF NOT EXISTS event_retries (
+    retry_id TEXT PRIMARY KEY,
+    tenant_id TEXT NOT NULL,
+    negotiation_id TEXT NOT NULL,
+    workflow_id TEXT NOT NULL,
+    event_type TEXT NOT NULL,
+    payload_json TEXT NOT NULL DEFAULT '{}',
+    attempt_count INTEGER NOT NULL DEFAULT 0,
+    last_attempt_at TEXT,
+    last_error TEXT NOT NULL DEFAULT '',
+    status TEXT NOT NULL DEFAULT 'pending'
+);
+
+CREATE INDEX IF NOT EXISTS idx_retries_by_tenant ON event_retries(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_retries_by_status ON event_retries(status);
+"""
+
+_RETRY_FIELD_ORDER = (
+    "retry_id, tenant_id, negotiation_id, workflow_id, event_type, "
+    "payload_json, attempt_count, last_attempt_at, last_error, status"
+)
+_RETRY_NUM_FIELDS = len(_RETRY_FIELD_ORDER.split(", "))
+
+
+def _retry_row_to_db_tuple(row: EventRetryRow) -> tuple:
+    """Convert an EventRetryRow to a database tuple."""
+    return (
+        row.retry_id,
+        row.tenant_id,
+        row.negotiation_id,
+        row.workflow_id,
+        row.event_type,
+        row.payload_json,
+        row.attempt_count,
+        row.last_attempt_at.isoformat() if row.last_attempt_at else None,
+        row.last_error,
+        row.status,
+    )
+
+
+def _db_tuple_to_retry_row(t: tuple) -> EventRetryRow:
+    """Convert a database tuple to an EventRetryRow."""
+    (
+        retry_id, tenant_id, negotiation_id, workflow_id, event_type,
+        payload_json, attempt_count, last_attempt_at_str, last_error, status,
+    ) = t
+    return EventRetryRow(
+        retry_id=retry_id,
+        tenant_id=tenant_id,
+        negotiation_id=negotiation_id,
+        workflow_id=workflow_id,
+        event_type=event_type,
+        payload_json=payload_json,
+        attempt_count=attempt_count,
+        last_attempt_at=datetime.fromisoformat(last_attempt_at_str) if last_attempt_at_str else None,
+        last_error=last_error,
+        status=status,
+    )
+
+
+def _row_to_db_tuple(row: NegotiationRow, tenant_id: str) -> tuple:
+    """Convert a NegotiationRow to a database tuple."""
+    return (
+        tenant_id,
+        row.negotiation_id,
+        row.row_number,
+        row.owner,
+        row.workflow_id,
+        row.category,
+        row.priority,
+        row.counterparty_description,
+        row.whos_court,
+        row.status.value,
+        row.comments,
+        row.action_next_steps,
+        row.contract_type,
+        row.round_number,
+        row.last_outbound_version_sent,
+        row.last_counterparty_version,
+        row.last_activity_date.isoformat() if row.last_activity_date else None,
+        row.inbox_thread_id,
+        row.storage_folder_path,
+        row.review_package_status,
+        row.counterparty_profile_ref,
+        row.last_review_package_sent_date.isoformat() if row.last_review_package_sent_date else None,
+        row.automation_status,
+        row.audit_log_ref,
+    )
+
+
+def _db_tuple_to_row(t: tuple) -> NegotiationRow:
+    """Convert a database tuple to a NegotiationRow."""
+    (
+        _tenant_id, negotiation_id, row_number, owner, workflow_id,
+        category, priority, counterparty_description, whos_court, status_str,
+        comments, action_next_steps, contract_type, round_number,
+        last_outbound_version_sent, last_counterparty_version,
+        last_activity_date_str, inbox_thread_id, storage_folder_path,
+        review_package_status, counterparty_profile_ref, last_review_package_sent_date_str,
+        automation_status, audit_log_ref,
+    ) = t
+
+    return NegotiationRow(
+        negotiation_id=negotiation_id,
+        row_number=row_number,
+        owner=owner,
+        workflow_id=workflow_id,
+        category=category,
+        priority=priority,
+        counterparty_description=counterparty_description,
+        whos_court=whos_court,
+        status=NegotiationState(status_str),
+        comments=comments,
+        action_next_steps=action_next_steps,
+        contract_type=contract_type,
+        round_number=round_number,
+        last_outbound_version_sent=last_outbound_version_sent,
+        last_counterparty_version=last_counterparty_version,
+        last_activity_date=datetime.fromisoformat(last_activity_date_str) if last_activity_date_str else None,
+        inbox_thread_id=inbox_thread_id,
+        storage_folder_path=storage_folder_path,
+        review_package_status=review_package_status,
+        counterparty_profile_ref=counterparty_profile_ref,
+        last_review_package_sent_date=datetime.fromisoformat(last_review_package_sent_date_str) if last_review_package_sent_date_str else None,
+        automation_status=automation_status,
+        audit_log_ref=audit_log_ref,
+    )
+
+
+_FIELD_ORDER = (
+    "tenant_id, negotiation_id, row_number, owner, workflow_id, category, priority, "
+    "counterparty_description, whos_court, status, comments, action_next_steps, "
+    "contract_type, round_number, last_outbound_version_sent, last_counterparty_version, "
+    "last_activity_date, inbox_thread_id, storage_folder_path, review_package_status, "
+    "counterparty_profile_ref, last_review_package_sent_date, automation_status, audit_log_ref"
+)
+_NUM_FIELDS = len(_FIELD_ORDER.split(", "))
+
+
+class SQLiteLedger(LedgerAdapter):
+    """SQLite-backed ledger. Uses :memory: by default; can be file-backed for persistence."""
+
+    def __init__(self, db_path: str = ":memory:"):
+        self._db_path = db_path
+        # SQLite connections aren't thread-safe by default; use a lock
+        self._lock = threading.Lock()
+        self._conn = sqlite3.connect(db_path, check_same_thread=False)
+        self._conn.executescript(_SCHEMA)
+        self._conn.commit()
+
+    def get_row(self, tenant_id: str, negotiation_id: str) -> Optional[NegotiationRow]:
+        with self._lock:
+            cur = self._conn.execute(
+                f"SELECT {_FIELD_ORDER} FROM negotiations WHERE tenant_id = ? AND negotiation_id = ?",
+                (tenant_id, negotiation_id),
+            )
+            row = cur.fetchone()
+        if row is None:
+            return None
+        return _db_tuple_to_row(row)
+
+    def list_rows(self, tenant_id: str) -> list[NegotiationRow]:
+        with self._lock:
+            cur = self._conn.execute(
+                f"SELECT {_FIELD_ORDER} FROM negotiations WHERE tenant_id = ? ORDER BY row_number",
+                (tenant_id,),
+            )
+            rows = cur.fetchall()
+        return [_db_tuple_to_row(r) for r in rows]
+
+    def upsert_row(self, tenant_id: str, row: NegotiationRow) -> None:
+        db_tuple = _row_to_db_tuple(row, tenant_id)
+        placeholders = ", ".join(["?"] * _NUM_FIELDS)
+        with self._lock:
+            self._conn.execute(
+                f"INSERT OR REPLACE INTO negotiations ({_FIELD_ORDER}) VALUES ({placeholders})",
+                db_tuple,
+            )
+            self._conn.commit()
+
+    def get_owner(self, negotiation_id: str) -> Optional[str]:
+        with self._lock:
+            cur = self._conn.execute(
+                "SELECT tenant_id FROM negotiations WHERE negotiation_id = ?",
+                (negotiation_id,),
+            )
+            result = cur.fetchone()
+        return result[0] if result else None
+
+    def list_all_owners(self) -> dict[str, str]:
+        with self._lock:
+            cur = self._conn.execute(
+                "SELECT negotiation_id, tenant_id FROM negotiations"
+            )
+            return {nid: tid for nid, tid in cur.fetchall()}
+
+    def get_row_by_thread_id(self, tenant_id: str, thread_id: str) -> Optional[NegotiationRow]:
+        with self._lock:
+            cur = self._conn.execute(
+                f"SELECT {_FIELD_ORDER} FROM negotiations "
+                "WHERE tenant_id = ? AND inbox_thread_id = ? LIMIT 1",
+                (tenant_id, thread_id),
+            )
+            row = cur.fetchone()
+        if row is None:
+            return None
+        return _db_tuple_to_row(row)
+
+    # ------------------------------------------------------------------ #
+    # Retry state                                                          #
+    # ------------------------------------------------------------------ #
+
+    def get_retry_state(self, retry_id: str) -> Optional[EventRetryRow]:
+        with self._lock:
+            cur = self._conn.execute(
+                f"SELECT {_RETRY_FIELD_ORDER} FROM event_retries WHERE retry_id = ?",
+                (retry_id,),
+            )
+            row = cur.fetchone()
+        if row is None:
+            return None
+        return _db_tuple_to_retry_row(row)
+
+    def upsert_retry_state(self, row: EventRetryRow) -> None:
+        db_tuple = _retry_row_to_db_tuple(row)
+        placeholders = ", ".join(["?"] * _RETRY_NUM_FIELDS)
+        with self._lock:
+            self._conn.execute(
+                f"INSERT OR REPLACE INTO event_retries ({_RETRY_FIELD_ORDER}) VALUES ({placeholders})",
+                db_tuple,
+            )
+            self._conn.commit()
+
+    def list_pending_retries(self, tenant_id: Optional[str] = None) -> list[EventRetryRow]:
+        with self._lock:
+            if tenant_id is not None:
+                cur = self._conn.execute(
+                    f"SELECT {_RETRY_FIELD_ORDER} FROM event_retries "
+                    "WHERE status IN ('pending', 'in_progress') AND tenant_id = ? "
+                    "ORDER BY retry_id",
+                    (tenant_id,),
+                )
+            else:
+                cur = self._conn.execute(
+                    f"SELECT {_RETRY_FIELD_ORDER} FROM event_retries "
+                    "WHERE status IN ('pending', 'in_progress') "
+                    "ORDER BY retry_id",
+                )
+            rows = cur.fetchall()
+        return [_db_tuple_to_retry_row(r) for r in rows]
+
+    def close(self):
+        with self._lock:
+            self._conn.close()

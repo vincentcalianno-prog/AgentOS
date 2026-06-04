@@ -1,0 +1,150 @@
+id: mepa.delivery.inspection_acceptance
+contract_type_id: mepa
+category_id: delivery
+sub_clause_id: inspection_acceptance
+
+defend_baseline:
+  template_ref:
+    document_id: antora_mepa_template
+    section_id: "§2.5"
+    version: "v1.0"
+  guidance: >
+    Antora has 10 business days following DDP delivery to inspect
+    the Equipment and issue written acceptance or rejection.
+    Acceptance is not deemed by silence — rejection must be in
+    writing within the inspection window. Acceptance triggers the
+    warranty period start date. Partial acceptance is not permitted
+    without written agreement from both parties.
+
+negotiability: parametric
+
+evidence_tier: provisional
+review_status: draft
+
+accept_modifications:
+  - id: inspection_acceptance.accept.extended_inspection_window
+    description: >
+      Supplier requests an extended inspection window beyond
+      10 business days for complex equipment requiring
+      commissioning before acceptance can be evaluated.
+      Acceptable up to 30 business days with written justification
+      and SCM manager approval.
+    example_language: >
+      Buyer shall have thirty (30) business days following
+      delivery to inspect the Equipment and issue written
+      acceptance or rejection.
+    rationale: >
+      Complex BOP equipment (e.g., switchgear, E-House) may
+      require commissioning activities before full inspection
+      is possible. Extended window acceptable if warranty start
+      is correspondingly preserved.
+
+  - id: inspection_acceptance.accept.conditional_acceptance
+    description: >
+      Buyer issues conditional acceptance with a written punch
+      list of minor deficiencies, reserving right to reject if
+      deficiencies are not remediated within an agreed period.
+      Acceptable provided warranty period does not start until
+      final acceptance.
+    example_language: >
+      Buyer may issue conditional acceptance with a written
+      punch list. Warranty period commences upon final
+      acceptance following punch list resolution.
+    rationale: >
+      Conditional acceptance with punch list is commercially
+      standard on capital equipment. Acceptable provided
+      warranty trigger is final acceptance, not conditional
+      acceptance.
+
+reject_thresholds:
+  - id: inspection_acceptance.reject.deemed_acceptance
+    description: >
+      Supplier proposes that silence or failure to reject within
+      the inspection window constitutes deemed acceptance.
+    example_language: >
+      "Buyer's failure to reject within [X] days shall constitute
+      acceptance" or "Equipment shall be deemed accepted if no
+      written rejection is received within [X] days"
+    rationale: >
+      Deemed acceptance by silence removes Antora's ability to
+      reject non-conforming equipment discovered during
+      commissioning. Rejection requires affirmative written act.
+      Reject any deemed acceptance construct.
+
+  - id: inspection_acceptance.reject.supplier_determined_acceptance
+    description: >
+      Supplier proposes that acceptance occurs upon supplier's
+      own certification, factory acceptance test (FAT), or
+      third-party testing without Antora's written confirmation.
+    example_language: >
+      "Acceptance shall occur upon successful completion of
+      factory acceptance testing" or "Equipment accepted upon
+      supplier certification of conformance"
+    rationale: >
+      Acceptance is Antora's right, not the supplier's to
+      declare. Only Antora's written acceptance triggers warranty
+      commencement and final payment milestone.
+
+antora_response:
+  rejection_response:
+    rationale: >
+      Antora's inspection and acceptance rights are a core
+      protection on capital equipment. Deemed acceptance by
+      silence eliminates Antora's ability to reject
+      non-conforming equipment and improperly triggers the
+      warranty period and payment milestones. Rejection requires
+      an affirmative written act within the inspection window.
+    counter_proposal: >
+      Buyer shall have ten (10) business days following DDP
+      delivery to inspect the Equipment and issue written
+      acceptance or written rejection specifying the basis for
+      rejection. Failure to issue written rejection within such
+      period shall not constitute acceptance. Acceptance shall
+      occur only upon Buyer's affirmative written notice.
+      The warranty period shall commence upon the date of
+      Buyer's written acceptance.
+  compromise_response:
+    conditions: >
+      Extended inspection window (up to 30 business days) is
+      acceptable for complex equipment requiring commissioning.
+      Conditional acceptance with punch list is acceptable
+      provided warranty commences on final acceptance.
+      No compromise on the no-deemed-acceptance principle or
+      on supplier-declared acceptance.
+    revised_language: >
+      Buyer shall have [10/30] business days following DDP
+      delivery to inspect the Equipment and issue written
+      acceptance, conditional acceptance with punch list, or
+      written rejection. Acceptance shall not be deemed by
+      silence. The warranty period shall commence upon Buyer's
+      written acceptance or, if conditional acceptance was
+      issued, upon Buyer's written final acceptance following
+      punch list resolution.
+  acceptance_response:
+    rationale: >
+      Supplier's proposed language requires Antora's affirmative
+      written acceptance, does not deem acceptance by silence,
+      and links warranty commencement to written acceptance.
+      Antora's baseline position is preserved.
+
+constraints:
+  inspection_window_business_days: 10
+  extended_window_max_business_days: 30
+
+pending_items:
+  - "Confirm template section reference (§2.5 assumed — verify
+     against antora_mepa_template v1.0)"
+  - "Confirm whether partial acceptance is addressed in template
+     or needs a separate reject threshold"
+  - "First executed MEPA with acceptance clause upgrades
+     evidence_tier to Tier 1"
+
+related_entries:
+  - mepa.delivery.ddp_terms
+  - mepa.delivery.risk_of_loss
+  - mepa.warranty.warranty_period
+
+examples:
+  - "Pratt Project (PRA1-XFMR-002): 20MVA E-Boiler transformer,
+     22-week ARO. Commissioning timeline suggests extended
+     inspection window may be needed — flag for negotiation."
