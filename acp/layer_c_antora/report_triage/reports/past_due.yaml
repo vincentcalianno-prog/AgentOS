@@ -1,0 +1,13 @@
+report_id: past_due
+display_name: "Past Due Report"
+source:
+  match_sender: "adam.panzer@rtbellc.com"
+  match_subject: ~      # TODO: subject pattern
+format: spreadsheetml_xml2003
+grain: per_po_line
+item_key_fields: []     # TODO: e.g. [po_number, line_number]
+column_map: {}          # TODO
+owner_field: ~          # TODO: "Buyer" with fallback for "See PO Requester"
+owner_fallback_rule: ~  # TODO: rule for "See PO Requester" value
+staleness_threshold_days: ~   # TODO
+escalation_owner: ~           # TODO: e.g. Ranjeet

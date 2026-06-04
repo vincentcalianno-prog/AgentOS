@@ -52,7 +52,7 @@ from acp.layer_b.core.types import (
     StateEvent,
     TenantContext,
 )
-from acp.layer_b.loaders.playbook_loader import PlaybookLoader
+from acp.layer_c_antora.loaders.playbook_loader import PlaybookLoader
 from acp.layer_b.resolver import OverlayResolver
 from acp.layer_b.tests.fixtures.mock_storage import MockStorageAdapter
 from acp.schemas.playbook_schemas import PlaybookEntry

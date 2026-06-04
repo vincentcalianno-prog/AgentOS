@@ -1,8 +1,12 @@
 """Playbook entry loader for the ACP negotiation engine.
 
-Loads PlaybookEntry objects from YAML files under <layer_c_root>/playbook/.
+Layer C concrete loader for Workflow #1 (contract redline). Loads
+PlaybookEntry objects from YAML files under <layer_c_root>/playbook/.
 The deployment root (layer_c_root) is a constructor argument — this loader
 contains no deployment-specific paths or identifiers.
+
+Subclasses KnowledgeLoader (Layer B abstract base). Layer B engine
+components depend on the KnowledgeLoader interface, not this class.
 
 Supersedes PilotEntryLoader for entries committed as YAML in a deployment's
 Layer C. PilotEntryLoader remains available for the dry-run harness.
@@ -21,6 +25,7 @@ from typing import Optional
 
 import yaml
 
+from acp.layer_b.loaders.knowledge_loader import KnowledgeLoader
 from acp.schemas.playbook_schemas import (
     AcceptModification,
     AcceptanceResponse,
@@ -180,12 +185,16 @@ def _parse_entry(data: dict, source_path: Path) -> PlaybookEntry:
 # Public loader
 # ---------------------------------------------------------------------------
 
-class PlaybookLoader:
-    """Load PlaybookEntry objects from a deployment's playbook directory.
+class PlaybookLoader(KnowledgeLoader):
+    """Layer C concrete loader for Workflow #1 PlaybookEntry objects.
 
     Scans <layer_c_root>/playbook/**/*.yaml and indexes entries by
     PlaybookEntry.id.  An absent playbook directory yields an empty loader
     rather than raising — callers decide whether that is an error.
+
+    Subclasses KnowledgeLoader. Layer B engine components depend on the
+    KnowledgeLoader interface; only Layer C wiring should use this class
+    directly.
 
     Usage::
 
@@ -255,3 +264,22 @@ class PlaybookLoader:
         """Return all known entry ids in load order (alphabetical by file path)."""
         self._ensure_loaded()
         return list(self._index.keys())
+
+    def load(self, config_path: str) -> list:
+        """Implement KnowledgeLoader.load() — returns all PlaybookEntry objects.
+
+        config_path is interpreted as the layer_c_root for this call, allowing
+        the loader to be used via the abstract interface when the root is
+        not known at construction time. If config_path differs from the root
+        passed at construction, a new scan is performed.
+
+        Returns:
+            List of all loaded PlaybookEntry objects.
+        """
+        root = Path(config_path)
+        if root != Path(self._playbook_dir).parent:
+            # Different root: scan the new path
+            tmp = PlaybookLoader(root)
+            return list(tmp.load_all().values())
+        self._ensure_loaded()
+        return list(self._index.values())

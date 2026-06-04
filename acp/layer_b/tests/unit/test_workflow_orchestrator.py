@@ -355,14 +355,14 @@ class ResolveInboxEventTests(unittest.TestCase):
 
     def test_drop_silently_policy_does_not_emit(self):
         from acp.layer_b.agents.workflow_orchestrator_config import (
-            CredentialsConfig, ExtensionsConfig, PlaybookConfig,
+            CredentialsConfig, ExtensionsConfig, KnowledgeConfig,
         )
         config = WorkflowOrchestratorConfig(
             credentials=CredentialsConfig(),
             operational=OperationalConfig(
                 sla_thresholds={}, max_retry_attempts=3
             ),
-            playbook=PlaybookConfig(),
+            knowledge=KnowledgeConfig(),
             organization=OrganizationConfig(
                 notification_routes=(),
                 lookup_failure_policy="drop_silently",
@@ -385,14 +385,14 @@ class ResolveInboxEventTests(unittest.TestCase):
 
     def test_auto_create_policy_raises_not_implemented(self):
         from acp.layer_b.agents.workflow_orchestrator_config import (
-            CredentialsConfig, ExtensionsConfig, PlaybookConfig,
+            CredentialsConfig, ExtensionsConfig, KnowledgeConfig,
         )
         config = WorkflowOrchestratorConfig(
             credentials=CredentialsConfig(),
             operational=OperationalConfig(
                 sla_thresholds={}, max_retry_attempts=3
             ),
-            playbook=PlaybookConfig(),
+            knowledge=KnowledgeConfig(),
             organization=OrganizationConfig(
                 notification_routes=(),
                 lookup_failure_policy="auto_create_negotiation",

@@ -21,7 +21,7 @@ import textwrap
 import unittest
 from pathlib import Path
 
-from acp.layer_b.loaders.playbook_loader import PlaybookLoadError, PlaybookLoader
+from acp.layer_c_antora.loaders.playbook_loader import PlaybookLoadError, PlaybookLoader
 from acp.schemas.playbook_schemas import PlaybookEntry
 
 # ---------------------------------------------------------------------------

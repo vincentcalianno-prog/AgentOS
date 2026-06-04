@@ -1,0 +1,6 @@
+# Buyer roster and owner-fallback rules — Antora-specific
+# Format TBD based on actual buyer list
+buyers: []              # TODO: list of buyer name → email mappings
+fallback_rules:
+  - condition: ~        # TODO: e.g. owner_value == "See PO Requester"
+    resolution: ~       # TODO: e.g. look up PO requester field

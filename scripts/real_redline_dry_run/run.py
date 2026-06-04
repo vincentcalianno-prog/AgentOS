@@ -86,7 +86,7 @@ from acp.layer_b.core.types import (
     TenantContext,
 )
 from acp.layer_b.loaders.pilot_entry_loader import PilotEntryLoader
-from acp.layer_b.loaders.playbook_loader import PlaybookLoader
+from acp.layer_c_antora.loaders.playbook_loader import PlaybookLoader
 from acp.layer_b.resolver import OverlayResolver
 from acp.schemas.playbook_schemas import (
     AcceptanceResponse,

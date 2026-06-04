@@ -1,0 +1,13 @@
+report_id: vendor_not_yet_accepted
+display_name: "Vendor Not Yet Accepted PO Report"
+source:
+  match_sender: ~       # TODO: Jerome's email address
+  match_subject: ~      # TODO: subject pattern
+format: csv
+grain: per_po
+item_key_fields: []     # TODO: e.g. [document_number]
+column_map: {}          # TODO: source_col: canonical_field mappings
+owner_field: ~          # TODO: e.g. "Buyer"
+owner_fallback_rule: ~  # TODO
+staleness_threshold_days: ~   # TODO
+escalation_owner: ~           # TODO: e.g. Ranjeet

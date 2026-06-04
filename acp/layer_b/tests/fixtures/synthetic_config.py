@@ -17,10 +17,10 @@ from __future__ import annotations
 from acp.layer_b.agents.workflow_orchestrator_config import (
     CredentialsConfig,
     ExtensionsConfig,
+    KnowledgeConfig,
     NotificationRoute,
     OperationalConfig,
     OrganizationConfig,
-    PlaybookConfig,
     WorkflowOrchestratorConfig,
 )
 from acp.layer_b.core.types import NegotiationState
@@ -81,7 +81,7 @@ SYNTHETIC_CONFIG = WorkflowOrchestratorConfig(
         retry_backoff_base_seconds=60,
         polling_interval_seconds=900,
     ),
-    playbook=PlaybookConfig(
+    knowledge=KnowledgeConfig(
         legal_review_required_statuses=(),
         escalation_chain=("alice", "vincent"),
     ),

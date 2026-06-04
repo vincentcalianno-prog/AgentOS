@@ -1,0 +1,6 @@
+workbook_id: ~          # TODO: Google Sheets workbook ID
+tracker_tab: "Action Tracker"
+repository_tab: "Repository"
+# IMPORTANT: workbook_id must never be committed to the repo.
+# Load from environment variable ANTORA_SHEETS_WORKBOOK_ID at runtime.
+# Add ANTORA_SHEETS_WORKBOOK_ID to .env.example (already done).

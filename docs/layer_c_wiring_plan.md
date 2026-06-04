@@ -411,7 +411,7 @@ This requires a small Layer B change (add the `EVENT_NEGOTIATION_FAILED` emit to
 | `inbox_label_filter` | `"ACP/Inbound"` (Gmail label Vincent applies to counterparty emails) |
 | `automation_active_statuses` | `["Active", "UnderReview", "AwaitingCounterparty"]` |
 
-### 7c. PlaybookConfig
+### 7c. KnowledgeConfig
 
 | Field | Antora value |
 |---|---|

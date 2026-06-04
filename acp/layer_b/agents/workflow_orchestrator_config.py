@@ -12,13 +12,13 @@ Design intent:
     specify what they care about.
   - No Antora-specific values live here. Antora's actual config lives in
     layer_c_antora/. Other deployments supply their own.
-  - Phase 1 stubs (CredentialsConfig, PlaybookConfig, ExtensionsConfig) are
+  - Phase 1 stubs (CredentialsConfig, KnowledgeConfig, ExtensionsConfig) are
     documented as "Phase 1: stub" so future work is clearly located.
 
 Category map:
     Cat 1  CredentialsConfig   — external endpoints / tokens (Phase 1: stubs)
     Cat 2  OperationalConfig   — SLA thresholds, retry budgets, polling params
-    Cat 3  PlaybookConfig      — escalation rules, legal triggers (Phase 1: stubs)
+    Cat 3  KnowledgeConfig     — escalation rules, legal triggers (Phase 1: stubs)
     Cat 4  OrganizationConfig  — notification routes, lookup-failure policy
     Cat 5  ExtensionsConfig    — custom workflow hooks (Phase 1: stubs)
 """
@@ -79,11 +79,11 @@ class OperationalConfig:
 
 
 # ============================================================
-# Cat 3 — Playbook
+# Cat 3 — Knowledge
 # ============================================================
 
 @dataclass(frozen=True)
-class PlaybookConfig:
+class KnowledgeConfig:
     """Escalation rules and legal-review triggers.
 
     Phase 1: stub. Escalation policy is richer in future phases when the
@@ -94,7 +94,6 @@ class PlaybookConfig:
 
     escalation_chain: ordered tuple of recipient_ids for multi-tier escalation.
     First contact is notified on first breach; second on second breach; etc.
-    Matches the spec's "first Slack, second Gmail, third Ranjeet" pattern.
     """
     legal_review_required_statuses: tuple = ()
     escalation_chain: tuple = ()           # tuple[str, ...] of recipient_ids
@@ -179,7 +178,7 @@ class WorkflowOrchestratorConfig:
                 sla_thresholds={("contract_redline", "Negotiating"): 10},
                 max_retry_attempts=3,
             ),
-            playbook=PlaybookConfig(escalation_chain=("alice", "vincent")),
+            knowledge=KnowledgeConfig(escalation_chain=("alice", "vincent")),
             organization=OrganizationConfig(
                 notification_routes=(
                     NotificationRoute("retry_exhausted", "alice", "slack"),
@@ -190,6 +189,6 @@ class WorkflowOrchestratorConfig:
     """
     credentials: CredentialsConfig
     operational: OperationalConfig
-    playbook: PlaybookConfig
+    knowledge: KnowledgeConfig
     organization: OrganizationConfig
     extensions: ExtensionsConfig
